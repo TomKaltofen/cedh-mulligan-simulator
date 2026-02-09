@@ -10,22 +10,26 @@ version = "0.3.1"
 description = "cEDH mulligan simulator - plugin for Magic: The Gathering Commander mulligan analysis"
 license = "Apache-2.0"
 authors = [{ name = "Tom", email = "mulligan@mloda.ai" }]
-dependencies = ["mloda>=0.4.5", "mloda-testing>=0.2.8"]
+dependencies = ["mloda>=0.4.5", "mloda-testing>=0.2.8", "pandas>=2.0"]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
+plots = ["matplotlib>=3.7"]
 dev = [
     "tox",
     "tox-uv",
     "pytest",
+    "pytest-xdist",
+    "pytest-timeout",
     "ruff",
     "mypy",
     "bandit",
+    "matplotlib>=3.7",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["cedh_mulligan_simulator*"]
+include = ["cedh_mulligan_simulator*", "card_registries*", "card_database*"]
 
 [tool.pytest.ini_options]
 testpaths = ["cedh_mulligan_simulator", "tests"]
