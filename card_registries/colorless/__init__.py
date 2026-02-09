@@ -1,0 +1,1 @@
+"""Colorless commander registries."""

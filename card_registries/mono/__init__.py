@@ -1,0 +1,1 @@
+"""Mono-color commander registries."""

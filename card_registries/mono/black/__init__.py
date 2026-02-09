@@ -1,0 +1,1 @@
+"""Mono-black commander registries."""

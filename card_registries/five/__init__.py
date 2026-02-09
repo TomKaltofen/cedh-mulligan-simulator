@@ -1,0 +1,1 @@
+"""Five-color commander registries."""
