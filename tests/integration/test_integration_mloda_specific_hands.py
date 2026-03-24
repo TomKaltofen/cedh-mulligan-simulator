@@ -30,7 +30,7 @@ from card_database.lands import (
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
 from cedh_mulligan_simulator.card_registry import CardRegistry, ManaRequirement, build_registry
 from cedh_mulligan_simulator.feature_groups.mulligan import HandGenerator, MulliganResult
-from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider
+from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider, SpecificHandProvider
 
 
 def _concat_results(results: list[Any]) -> pl.DataFrame:
@@ -44,24 +44,6 @@ def _concat_results(results: list[Any]) -> pl.DataFrame:
                 parts.append(r.select(new_cols))
                 seen_cols.update(new_cols)
     return pl.concat(parts, how="horizontal")
-
-
-class SpecificHandProvider(FeatureGroup):
-    """Provides specific hand data for integration testing.
-
-    Set _test_data before calling mlodaAPI.run_all().
-    Required columns: hand, simulation_id, mulligan_count, scenario_id, remaining_library
-    """
-
-    _test_data: Optional[pl.DataFrame] = None
-
-    @classmethod
-    def input_data(cls) -> Optional[Any]:
-        return DataCreator({"hand", "simulation_id", "mulligan_count", "scenario_id", "remaining_library"})
-
-    @classmethod
-    def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        return cls._test_data
 
 
 def run_hand_simulation(

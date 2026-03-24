@@ -11,7 +11,7 @@ from mloda_plugins.compute_framework.base_implementations.polars.dataframe impor
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
 from cedh_mulligan_simulator.feature_groups.statistics import Convergence  # noqa: F401
 from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider
-from tests.test_integration_mloda_specific_hands import SpecificHandProvider
+from tests.feature_groups.test_data_providers import SpecificHandProvider
 
 
 def _concat_results(results: list[Any]) -> pl.DataFrame:

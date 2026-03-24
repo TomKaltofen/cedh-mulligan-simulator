@@ -16,7 +16,7 @@ from cedh_mulligan_simulator.feature_groups.mulligan.hand_generator import HandG
 from cedh_mulligan_simulator.feature_groups.mulligan.mulligan_result import MulliganResult
 from cedh_mulligan_simulator.feature_groups.statistics.card_cooccurrence import CardCooccurrence  # noqa: F401
 from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider
-from tests.test_integration_mloda_specific_hands import SpecificHandProvider
+from tests.feature_groups.test_data_providers import SpecificHandProvider
 
 
 def _concat_results(results: list[Any]) -> pl.DataFrame:

@@ -17,6 +17,24 @@ import polars as pl
 from mloda.provider import DataCreator, FeatureGroup, FeatureSet
 
 
+class SpecificHandProvider(FeatureGroup):
+    """Provides specific hand data for integration testing.
+
+    Set _test_data before calling mlodaAPI.run_all().
+    Required columns: hand, simulation_id, mulligan_count, scenario_id, remaining_library
+    """
+
+    _test_data: Optional[pl.DataFrame] = None
+
+    @classmethod
+    def input_data(cls) -> Optional[Any]:
+        return DataCreator({"hand", "simulation_id", "mulligan_count", "scenario_id", "remaining_library"})
+
+    @classmethod
+    def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
+        return cls._test_data
+
+
 class HandMulliganTestDataProvider(FeatureGroup):
     """Provides test data for hand and MulliganResult features.
 
