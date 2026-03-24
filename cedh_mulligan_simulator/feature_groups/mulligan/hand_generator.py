@@ -1,5 +1,6 @@
 """HandGenerator — DataCreator that generates mulligan sequences from a singleton deck."""
 
+import logging
 from typing import Any, List, Optional
 
 from mloda.provider import BaseInputData, DataCreator, FeatureGroup, FeatureSet
@@ -41,7 +42,7 @@ class HandGenerator(FeatureGroup):
                 scenario_ids.append(scenario_id)
                 remaining_libraries.append(list(deck.library))
 
-        print("Create hands:", len(hands))
+        logging.debug("Create hands: %d", len(hands))
         return {
             "hand": hands,
             "simulation_id": sim_ids,

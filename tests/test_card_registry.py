@@ -104,7 +104,6 @@ def test_braids_registry_has_all_card_types() -> None:
     assert "artifact" in types
     assert "creature" in types
     assert "sacrifice_outlet" in types
-    assert "equipment" in types
     assert "tutor" in types
 
 

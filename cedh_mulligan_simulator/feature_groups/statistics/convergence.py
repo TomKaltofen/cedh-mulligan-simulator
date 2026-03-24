@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -17,7 +17,7 @@ class Convergence(FeatureGroup):
     ordered by ``simulation_id``.  Useful for checking whether the
     estimate has stabilised as *N* grows.
 
-    Non-kept rows receive ``NaN``.
+    Non-kept rows receive ``null``.
     """
 
     @classmethod
@@ -34,17 +34,25 @@ class Convergence(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
         one_feature = features.name_of_one_feature
         if one_feature is None:
             raise ValueError("Convergence: no feature name found")
         fname: str = one_feature.name
         source = fname.replace("__convergence", "")
 
-        kept_mask = df["MulliganResult"].astype(bool)
-        kept = df.loc[kept_mask].sort_values("simulation_id")
-        running_mean: pd.Series[Any] = kept[source].expanding().mean()
+        df = df.with_row_index("__row_idx")
+        kept_mask = df["MulliganResult"].cast(pl.Boolean)
+        kept = df.filter(kept_mask).sort("simulation_id")
 
-        df[fname] = float("nan")
-        df.loc[kept.index, fname] = running_mean.values
+        source_list = kept[source].cast(pl.Float64).to_list()
+        running: list[float] = []
+        total = 0.0
+        for val in source_list:
+            total += float(val) if val is not None else 0.0
+            running.append(total / (len(running) + 1))
+
+        row_idxs = kept["__row_idx"].to_list()
+        running_df = pl.DataFrame({"__row_idx": row_idxs, fname: running})
+        df = df.join(running_df, on="__row_idx", how="left").drop("__row_idx")
         return df

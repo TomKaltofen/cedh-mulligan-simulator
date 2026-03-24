@@ -1,51 +1,65 @@
 # Getting Started
 
-There are two ways to create your own mloda plugin from this template.
+## Setup
 
-## Option 1: Use as Template (Recommended)
+```bash
+# Activate virtual environment
+source .venv/bin/activate
 
-GitHub's template feature creates a new repository with all files but a clean commit history.
+# Install dependencies
+uv sync --all-extras
+```
 
-1. Click the green **"Use this template"** button on the [repository page](https://github.com/mloda-ai/mloda-plugin-template)
-2. Choose **"Create a new repository"**
-3. Name your repository (e.g., `acme-features`, `acme-data-plugins`, or `mycompany-feature-groups`)
+## Run the simulation
 
-   > **Note:** Please don't use "mloda" in your package or repository name. However, you can use formulations like "for mloda" or "mloda-compatible" in descriptions.
+```bash
+python run_simulation.py
+```
 
-4. Choose public or private visibility
-5. Click **"Create repository"**
+This runs the full multi-scenario comparison: baseline vs. each A/B scenario (remove a card, add a Swamp). Output includes per-scenario statistics and plots saved to `plots/comparison/`.
 
-**Advantages:**
-- Clean commit history (starts fresh)
-- No fork relationship to maintain
-- Your repo is completely independent
-- One-click setup in GitHub UI
+## Run checks
 
-## Option 2: Fork
+```bash
+tox
+```
 
-Forking creates a copy that maintains a connection to the original repository.
+Runs pytest, ruff format, ruff check, mypy --strict, and bandit.
 
-1. Click the **"Fork"** button on the [repository page](https://github.com/mloda-ai/mloda-plugin-template)
-2. Choose your account or organization
-3. Name your forked repository
-4. Click **"Create fork"**
+## Project layout
 
-**Advantages:**
-- Can pull updates from the original template
-- Familiar workflow for open source contributors
+```
+card_database/          # Card definitions (lands, black spells, colorless artifacts)
+card_registries/        # Deck registries (e.g., Braids mono-black 99-card list)
+cedh_mulligan_simulator/
+  card_registry.py      # Card / Mana / ManaRequirement dataclasses
+  mana.py               # Mana line enumeration engine (pure Python)
+  deck.py               # Deck shuffle / draw utilities
+  feature_groups/
+    mulligan/           # HandGenerator, Turn1, Turn2, Turn3, MulliganResult
+    statistics/         # Proportion, MeanMulliganDepth, AverageKeptHandSize, CardCooccurrence
+    plots/              # ConvergencePlot, HandCompositionPlot
+tests/                  # Test suite (mirrors source layout)
+run_simulation.py       # Multi-scenario comparison entry point
+```
 
-**Disadvantages:**
-- Maintains fork relationship (shows "forked from" on your repo)
-- Copies entire commit history
-- GitHub may suggest contributing back to the original
+## Adding a new scenario
 
-## After Creating Your Repository
+Edit the `SCENARIOS` list in `run_simulation.py`:
 
-Regardless of which option you chose, follow the setup steps in the [README](../README.md#setup-your-plugin) to customize the template:
+```python
+SCENARIOS = [
+    {"id": "baseline", "name": "Baseline", "registry": BRAIDS_REGISTRY, "cost": BRAIDS_COST},
+    {
+        "id": "no_dark_ritual",
+        "name": "No Dark Ritual",
+        "registry": remove_card(BRAIDS_REGISTRY, "dark_ritual"),
+        "cost": BRAIDS_COST,
+    },
+    # ... add more here
+]
+```
 
-1. Clone your new repository locally
-2. Rename the `placeholder/` directory
-3. Update `pyproject.toml`
-4. Update `.releaserc.yaml` (change `mloda-plugin-template` to your package name and update `repositoryUrl`)
-5. Update Python imports
-6. Verify with `tox`
+## Adding a new card
+
+Add card definition to the appropriate `card_database/` module, then include it in a registry in `card_registries/`.

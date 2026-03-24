@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -35,7 +35,7 @@ class CardDeltaTable(FeatureGroup):
     Options (context):
         ``plot_dir`` — base directory override (e.g. ``tmp_path`` for tests)
 
-    Output column contains the CSV path for kept rows, ``NaN`` for non-kept rows.
+    Output column contains the CSV path for kept rows, ``None`` for non-kept rows.
     """
 
     def input_features(self, options: Options, feature_name: FeatureName) -> Optional[Set[Feature]]:
@@ -48,7 +48,7 @@ class CardDeltaTable(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
 
         experiment_id: str = (
             features.get_options_key("experiment_id") or features.get_options_key("scenario_id") or "default"
@@ -60,38 +60,39 @@ class CardDeltaTable(FeatureGroup):
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / "card_delta_table.csv"
 
-        kept_mask = df["MulliganResult"].astype(bool)
-        kept = df.loc[kept_mask].copy()
+        kept_mask = df["MulliganResult"].cast(pl.Boolean)
+        kept = df.filter(kept_mask)
 
         # Group by scenario and aggregate proportions
-        scenario_stats = (
-            kept.groupby("scenario_id")
-            .agg({"hand__t1__proportion": "first", "hand__t1__t2__proportion": "first"})
-            .reset_index()
+        scenario_stats = kept.group_by("scenario_id").agg(
+            [
+                pl.col("hand__t1__proportion").first(),
+                pl.col("hand__t1__t2__proportion").first(),
+            ]
         )
 
         # Identify baseline scenario
-        baseline_row = scenario_stats[scenario_stats["scenario_id"] == "baseline"]
-        if baseline_row.empty:
-            # Fallback: first alphabetically
-            scenario_stats = scenario_stats.sort_values("scenario_id")
-            baseline_row = scenario_stats.iloc[[0]]
+        baseline_row = scenario_stats.filter(pl.col("scenario_id") == "baseline")
+        if baseline_row.is_empty():
+            scenario_stats = scenario_stats.sort("scenario_id")
+            baseline_row = scenario_stats.head(1)
 
-        baseline_t1 = float(baseline_row["hand__t1__proportion"].iloc[0])
-        baseline_t2 = float(baseline_row["hand__t1__t2__proportion"].iloc[0])
+        baseline_t1 = float(baseline_row["hand__t1__proportion"][0] or 0.0)
+        baseline_t2 = float(baseline_row["hand__t1__t2__proportion"][0] or 0.0)
+        baseline_scenario_id = str(baseline_row["scenario_id"][0])
 
         # Parse card names and compute deltas
         rows = []
-        for _, row in scenario_stats.iterrows():
+        for row in scenario_stats.iter_rows(named=True):
             scenario_id = str(row["scenario_id"])
-            if scenario_id == baseline_row["scenario_id"].iloc[0]:
+            if scenario_id == baseline_scenario_id:
                 continue  # Skip baseline itself
 
             # Parse card name from scenario_id
             card_name = cls._parse_card_name(scenario_id)
 
-            scenario_t1 = float(row["hand__t1__proportion"])
-            scenario_t2 = float(row["hand__t1__t2__proportion"])
+            scenario_t1 = float(row["hand__t1__proportion"] or 0.0)
+            scenario_t2 = float(row["hand__t1__t2__proportion"] or 0.0)
 
             t1_delta = baseline_t1 - scenario_t1
             t1_pct_change = (t1_delta / baseline_t1 * 100.0) if baseline_t1 > 0 else 0.0
@@ -113,12 +114,10 @@ class CardDeltaTable(FeatureGroup):
                 }
             )
 
-        delta_df = pd.DataFrame(rows).sort_values("t1_delta", ascending=False)
-        delta_df.to_csv(out_path, index=False)
+        if rows:
+            pl.DataFrame(rows).sort("t1_delta", descending=True).write_csv(str(out_path))
 
-        df["CardDeltaTable"] = pd.array([None] * len(df), dtype="object")
-        df.loc[kept_mask, "CardDeltaTable"] = str(out_path)
-        return df
+        return df.with_columns(pl.when(kept_mask).then(pl.lit(str(out_path))).otherwise(None).alias("CardDeltaTable"))
 
     @staticmethod
     def _parse_card_name(scenario_id: str) -> str:

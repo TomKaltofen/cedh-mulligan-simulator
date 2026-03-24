@@ -31,7 +31,7 @@ BOGGART_TRAWLER = land("boggart_trawler", t1_mana=_B, t2_mana=_B)  # Pay 3 life 
 FELL_THE_PROFANE = land("fell_the_profane", t1_mana=_B, t2_mana=_B)  # Pay 3 life to enter untapped
 EMERGENCE_ZONE = land("emergence_zone", t1_mana=Mana(1), t2_mana=Mana(1))
 BOSEIJU_WHO_SHELTERS_ALL = land("boseiju", t1_mana=Mana(), t2_mana=Mana(1))
-URZAS_SAGA = land("urzas_saga", t1_mana=Mana(1), t2_mana=Mana(1))
+URZAS_SAGA = land("urzas_saga", t1_mana=Mana(1), t2_mana=Mana(1), sac_search_turn=3, sac_search_artifact_cmcs=(0, 1))
 TALON_GATES_OF_MADARA = land("talon_gates_of_madara", t1_mana=Mana(1), t2_mana=Mana(1))
 EUMIDIAN_HATCHERY = land("eumidian_hatchery", t1_mana=_B, t2_mana=_B)
 CABAL_PIT = land("cabal_pit", t1_mana=_B, t2_mana=_B)  # Can sac for -2/-2

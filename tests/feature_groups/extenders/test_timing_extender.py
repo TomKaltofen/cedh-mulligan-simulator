@@ -11,8 +11,7 @@ from mloda_plugins.compute_framework.base_implementations.pandas.dataframe impor
 
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
 from cedh_mulligan_simulator.extenders import TimingExtender
-from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider
-from tests.test_integration_mloda_specific_hands import SpecificHandProvider
+from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider, SpecificHandProvider
 
 
 def _hand_opts(n: int = 10, mulligan_steps: int = 4) -> Options:

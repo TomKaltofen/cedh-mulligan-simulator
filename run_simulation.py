@@ -9,14 +9,17 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-import pandas as pd  # noqa: E402
+import polars as pl  # noqa: E402
 
 from mloda.user import Domain, Feature, Options, PluginCollector, mlodaAPI
 from mloda.provider import FeatureGroup
-from mloda_plugins.compute_framework.base_implementations.pandas.dataframe import PandasDataFrame
+from mloda_plugins.compute_framework.base_implementations.polars.dataframe import PolarsDataFrame
 
+from card_database.black import DEEPWOOD_LEGATE, OFFALSNOUT
+from card_database.colorless import JEWELED_LOTUS
+from card_database.lands import SWAMP_2
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
-from cedh_mulligan_simulator.card_registry import CardRegistry
+from cedh_mulligan_simulator.card_registry import Card, CardRegistry, Mana, build_registry
 from cedh_mulligan_simulator.extenders import TimingExtender
 from cedh_mulligan_simulator.feature_groups.mulligan import (
     HandGenerator,
@@ -35,7 +38,7 @@ from cedh_mulligan_simulator.feature_groups.plots import (
     HandCompositionPlot,
 )
 
-N_SIMULATIONS = 1000
+N_SIMULATIONS = 2000
 
 # Box-drawing constants
 BOX_WIDTH = 60
@@ -46,6 +49,12 @@ BOX_THIN = "-"
 def remove_card(registry: CardRegistry, card_name: str) -> CardRegistry:
     """Create a new registry with the specified card removed."""
     return {k: v for k, v in registry.items() if k != card_name}
+
+
+def remove_cards(registry: CardRegistry, *card_names: str) -> CardRegistry:
+    """Create a new registry with all specified cards removed."""
+    names = set(card_names)
+    return {k: v for k, v in registry.items() if k not in names}
 
 
 def make_scenario_providers(scenario_id: str) -> set[type[FeatureGroup]]:
@@ -87,18 +96,123 @@ def make_scenario_providers(scenario_id: str) -> set[type[FeatureGroup]]:
     }
 
 
+# Replacement swamp entries used when cards are removed from the registry.
+# We use unique names so they don't collide with existing registry keys.
+_SWAMP_A = SWAMP_2
+
+# 1cmc creature replacements for the 0-mana creature swap scenario.
+_1CMC_CREATURES = [
+    Card(name="signal_pest", type="creature", cost=Mana(1), cmc=1),
+    Card(name="vault_skirge", type="creature", cost=Mana(1, black=1), cmc=1),
+    Card(name="gingerbrute", type="creature", cost=Mana(1), cmc=1),
+    Card(name="hope_of_ghirapur", type="creature", cost=Mana(1), cmc=1),
+]
+
+# Registry with Jeweled Lotus added (not in Braids main 99, used as A/B test target).
+_BRAIDS_WITH_JLO = build_registry(*BRAIDS_REGISTRY.values(), JEWELED_LOTUS)
+
+# Registry with Deepwood Legate added.
+_BRAIDS_WITH_DEEPWOOD = build_registry(*BRAIDS_REGISTRY.values(), DEEPWOOD_LEGATE)
+
+# Registry with Offalsnout added.
+_BRAIDS_WITH_OFFALSNOUT = build_registry(*BRAIDS_REGISTRY.values(), OFFALSNOUT)
+
+
+def _0mana_to_1cmc(registry: CardRegistry) -> CardRegistry:
+    """Replace the four 0-cost creatures with 1-CMC creatures."""
+    base = remove_cards(registry, "memnite", "ornithopter", "phyrexian_walker", "shield_sphere")
+    return build_registry(*base.values(), *_1CMC_CREATURES)
+
+
 # Define scenarios for comparison
 SCENARIOS: List[Dict[str, Any]] = [
+    # ── Baseline ────────────────────────────────────────────────────────────
     {
         "id": "baseline",
         "name": "Baseline",
         "registry": BRAIDS_REGISTRY,
         "cost": BRAIDS_COST,
     },
+    # ── Fast mana: individual card removal ─────────────────────────────────
     {
         "id": "no_lions_eye_diamond",
         "name": "No LED",
         "registry": remove_card(BRAIDS_REGISTRY, "lions_eye_diamond"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_jeweled_lotus",
+        "name": "No JLO",
+        "registry": remove_card(_BRAIDS_WITH_JLO, "jeweled_lotus"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_gemstone_caverns",
+        "name": "No Gemstone Caverns",
+        "registry": remove_card(BRAIDS_REGISTRY, "gemstone_caverns"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_jeweled_amulet",
+        "name": "No Jeweled Amulet",
+        "registry": remove_card(BRAIDS_REGISTRY, "jeweled_amulet"),
+        "cost": BRAIDS_COST,
+    },
+    # ── Lands ───────────────────────────────────────────────────────────────
+    {
+        "id": "no_peat_bog",
+        "name": "No Peat Bog",
+        "registry": remove_card(BRAIDS_REGISTRY, "peat_bog"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "peat_bog_to_swamp",
+        "name": "Peat Bog → Swamp",
+        "registry": build_registry(*remove_card(BRAIDS_REGISTRY, "peat_bog").values(), _SWAMP_A),
+        "cost": BRAIDS_COST,
+    },
+    # ── Creatures ───────────────────────────────────────────────────────────
+    {
+        "id": "no_0mana_creatures",
+        "name": "No 0-Mana Creatures",
+        "registry": remove_cards(BRAIDS_REGISTRY, "memnite", "ornithopter", "phyrexian_walker", "shield_sphere"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "1cmc_creatures",
+        "name": "1-CMC Creatures",
+        "registry": _0mana_to_1cmc(BRAIDS_REGISTRY),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_grief",
+        "name": "No Grief",
+        "registry": remove_card(BRAIDS_REGISTRY, "grief"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_deepwood_legate",
+        "name": "No Deepwood Legate",
+        "registry": remove_card(_BRAIDS_WITH_DEEPWOOD, "deepwood_legate"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_offalsnout",
+        "name": "No Offalsnout",
+        "registry": remove_card(_BRAIDS_WITH_OFFALSNOUT, "offalsnout"),
+        "cost": BRAIDS_COST,
+    },
+    # ── Equipment ───────────────────────────────────────────────────────────
+    {
+        "id": "no_drum",
+        "name": "No Springleaf Drum",
+        "registry": remove_card(BRAIDS_REGISTRY, "springleaf_drum"),
+        "cost": BRAIDS_COST,
+    },
+    {
+        "id": "no_mantle",
+        "name": "No Paradise Mantle",
+        "registry": remove_card(BRAIDS_REGISTRY, "paradise_mantle"),
         "cost": BRAIDS_COST,
     },
 ]
@@ -190,32 +304,31 @@ def build_all_features(scenarios: List[Dict[str, Any]], experiment_id: str) -> l
     return all_features
 
 
-def print_scenario_results(scenario: Dict[str, Any], df: pd.DataFrame) -> ScenarioMetrics:
+def print_scenario_results(scenario: Dict[str, Any], df: pl.DataFrame) -> ScenarioMetrics:
     """Print results for a single scenario and return key metrics."""
     print(f"{BOX_THIN * 3} Scenario: {scenario['name']} {BOX_THIN * 3}")
     print()
 
-    kept = df[df["MulliganResult"]]
+    kept = df.filter(pl.col("MulliganResult").cast(pl.Boolean))
     n = len(kept)
 
     # Compute statistics directly from data
-    t1_successes = int(kept["hand__t1"].sum())
-    t2_successes = int(kept["hand__t1__t2"].sum())
+    t1_successes = int(kept["hand__t1"].sum() or 0)
+    t2_successes = int(kept["hand__t1__t2"].sum() or 0)
 
     t1_ci_low, t1_prop, t1_ci_high = wilson_interval(t1_successes, n)
     t2_ci_low, t2_prop, t2_ci_high = wilson_interval(t2_successes, n)
 
     # Extract scalar statistics from first kept row
-    first_kept = kept.iloc[0]
-    mean_depth = float(first_kept["MeanMulliganDepth"])
-    avg_hand_size = float(first_kept["AverageKeptHandSize"])
+    mean_depth = float(kept["MeanMulliganDepth"][0] or 0.0)
+    avg_hand_size = float(kept["AverageKeptHandSize"][0] or 0.0)
 
     # Exclusive keep categories (each hand counted once)
     t2_only = kept["hand__t1__t2"] & ~kept["hand__t1"]
     forced = ~kept["hand__t1__t2"] & ~kept["hand__t1"]
 
-    t2_only_pct = t2_only.sum() / n
-    forced_pct = forced.sum() / n
+    t2_only_pct = int(t2_only.sum() or 0) / n
+    forced_pct = int(forced.sum() or 0) / n
 
     print(f"  {'Metric':<20} {'Rate':>10} {'95% CI':>20}")
     print(f"  {BOX_THIN * 50}")
@@ -232,9 +345,9 @@ def print_scenario_results(scenario: Dict[str, Any], df: pd.DataFrame) -> Scenar
     print()
 
     # Get plot paths
-    convergence_path = first_kept.get("ConvergencePlot", None)
-    composition_path = first_kept.get("HandCompositionPlot", None)
-    cooccurrence_path = first_kept.get("CardCooccurrence", None)
+    convergence_path = kept["ConvergencePlot"][0] if "ConvergencePlot" in kept.columns else None
+    composition_path = kept["HandCompositionPlot"][0] if "HandCompositionPlot" in kept.columns else None
+    cooccurrence_path = kept["CardCooccurrence"][0] if "CardCooccurrence" in kept.columns else None
 
     print(f"  {'Convergence Plot:':<20} {convergence_path or 'Not generated'}")
     print(f"  {'Hand Composition:':<20} {composition_path or 'Not generated'}")
@@ -353,8 +466,7 @@ def create_card_delta_table(metrics: List[ScenarioMetrics], experiment_id: str) 
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "card_delta_table.csv"
 
-    delta_df = pd.DataFrame(rows).sort_values("t1_delta", ascending=False)
-    delta_df.to_csv(out_path, index=False)
+    pl.DataFrame(rows).sort("t1_delta", descending=True).write_csv(str(out_path))
 
     return str(out_path)
 
@@ -393,9 +505,6 @@ def print_delta_summary(metrics: List[ScenarioMetrics]) -> None:
 
 
 def main() -> None:
-    pd.set_option("display.max_colwidth", None)
-    pd.set_option("display.width", None)
-
     experiment_id = "comparison"
 
     print_header("Braids Mulligan Simulator — Multi-Scenario Comparison", N_SIMULATIONS, len(SCENARIOS))
@@ -409,9 +518,12 @@ def main() -> None:
     all_features = build_all_features(SCENARIOS, experiment_id)
 
     # Single mloda call with all providers
+    # Note: ParallelizationMode.THREADING causes a race condition in mloda when multiple
+    # domains share the same feature names (e.g. hand__t1__proportion across scenarios).
+    # Sequential execution is correct here.
     results = mlodaAPI.run_all(
         features=all_features,
-        compute_frameworks={PandasDataFrame},
+        compute_frameworks={PolarsDataFrame},
         function_extender={TimingExtender()},
         plugin_collector=PluginCollector.enabled_feature_groups(all_providers),
     )
@@ -422,19 +534,19 @@ def main() -> None:
     #
     # Strategy: Group by (column_signature) to find pairs/groups of same feature type,
     # then use scenario_id within each group to assign, or positional order otherwise.
-    result_dfs = [r for r in results if isinstance(r, pd.DataFrame)]
+    result_dfs = [r for r in results if isinstance(r, pl.DataFrame)]
     n_scenarios = len(SCENARIOS)
 
     from collections import defaultdict
 
     # Group DataFrames by their column signature
-    sig_groups: Dict[tuple[str, ...], List[tuple[int, pd.DataFrame]]] = defaultdict(list)
+    sig_groups: Dict[tuple[str, ...], List[tuple[int, pl.DataFrame]]] = defaultdict(list)
     for i, df in enumerate(result_dfs):
         sig = tuple(sorted(df.columns))
         sig_groups[sig].append((i, df))
 
     # Build scenario results
-    scenario_result_lists: Dict[str, List[pd.DataFrame]] = {s["id"]: [] for s in SCENARIOS}
+    scenario_result_lists: Dict[str, List[pl.DataFrame]] = {s["id"]: [] for s in SCENARIOS}
 
     for sig, items in sig_groups.items():
         # Within this group, identify scenarios
@@ -445,7 +557,7 @@ def main() -> None:
                 # Use scenario_id to assign
                 for _, df in items:
                     if "scenario_id" in df.columns:
-                        sid = str(df["scenario_id"].iloc[0])
+                        sid = str(df["scenario_id"][0])
                         scenario_result_lists[sid].append(df)
             else:
                 # No scenario_id in this group - use original result order
@@ -462,9 +574,15 @@ def main() -> None:
         if not dfs:
             print(f"Warning: No results for scenario {scenario['id']}")
             continue
-        # Merge all DataFrames for this scenario by index (axis=1), deduplicate columns
-        merged = pd.concat(dfs, axis=1)
-        df = merged.loc[:, ~merged.columns.duplicated()]
+        # Merge all DataFrames for this scenario by columns, deduplicating
+        seen: set[str] = set()
+        parts: list[pl.DataFrame] = []
+        for sub_df in dfs:
+            new_cols = [c for c in sub_df.columns if c not in seen]
+            if new_cols:
+                parts.append(sub_df.select(new_cols))
+                seen.update(new_cols)
+        df = pl.concat(parts, how="horizontal")
         metrics = print_scenario_results(scenario, df)
         all_metrics.append(metrics)
 

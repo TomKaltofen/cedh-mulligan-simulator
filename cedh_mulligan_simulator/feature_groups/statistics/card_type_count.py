@@ -2,7 +2,7 @@
 
 from typing import Any
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureChainParser, FeatureChainParserMixin, FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -32,17 +32,24 @@ class CardTypeCount(FeatureChainParserMixin, FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
         card_registry = features.get_options_key("card_registry") or DEFAULT_CARD_REGISTRY
 
+        new_cols = []
         for feature in features.features:
             name = feature.get_name()
-            # Parse card type from feature name (e.g., "land__type_count" -> "land")
             parsed_type, _ = FeatureChainParser.parse_feature_name(name, [cls.PREFIX_PATTERN])
             card_type = parsed_type or ""
-            df[name] = df["hand"].apply(lambda hand, ct=card_type: _count_type(hand, card_registry, ct))
+            new_cols.append(
+                df["hand"]
+                .map_elements(
+                    lambda hand, ct=card_type: _count_type(hand, card_registry, ct),  # type: ignore[misc]
+                    return_dtype=pl.Int64,
+                )
+                .alias(name)
+            )
 
-        return df
+        return df.with_columns(new_cols)
 
 
 def _count_type(hand: list[str], registry: CardRegistry, card_type: str) -> int:

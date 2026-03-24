@@ -468,12 +468,38 @@ def _compute_battlefield_mana(battlefield: Battlefield, registry: CardRegistry) 
     """Compute mana available from persistent battlefield permanents on T2+."""
     pool = _ZERO
 
-    for land_name in battlefield.lands:
+    # Build per-land mana contributions as a list so we can handle sacrifice requirements.
+    land_names = list(battlefield.lands)
+    land_mana_list: List[Mana] = []
+    for land_name in land_names:
         card_obj = registry.get(land_name)
-        if card_obj is None:
+        land_mana_list.append(card_obj.t2_mana or _ZERO if card_obj is not None else _ZERO)
+
+    # Handle lands that require sacrificing a swamp (e.g., Lake of the Dead).
+    # For each such land: if a black-mana land is available to sacrifice, use it and grant
+    # the lake's mana; otherwise the lake produces nothing.
+    sacrificed_indices: Set[int] = set()
+    for i, land_name in enumerate(land_names):
+        card_obj = registry.get(land_name)
+        if card_obj is None or card_obj.requires != "sacrifice_swamp":
             continue
-        t2_mana = card_obj.t2_mana or _ZERO
-        pool = _add_mana(pool, t2_mana)
+        found = False
+        for j, other_name in enumerate(land_names):
+            if j == i or j in sacrificed_indices:
+                continue
+            other_obj = registry.get(other_name)
+            if other_obj is None or other_obj.requires == "sacrifice_swamp":
+                continue
+            if other_obj.t2_mana is not None and other_obj.t2_mana.black > 0:
+                sacrificed_indices.add(j)
+                found = True
+                break
+        if not found:
+            land_mana_list[i] = _ZERO  # No swamp available — lake produces nothing
+
+    for i, mana in enumerate(land_mana_list):
+        if i not in sacrificed_indices:
+            pool = _add_mana(pool, mana)
 
     for art_name in battlefield.artifacts:
         card_obj = registry.get(art_name)

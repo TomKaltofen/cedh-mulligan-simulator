@@ -1,141 +1,47 @@
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/mloda-ai/mloda-plugin-template/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![mloda](https://img.shields.io/badge/built%20with-mloda-blue.svg)](https://github.com/mloda-ai/mloda)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
-# mloda-plugin-template
+# cEDH Mulligan Simulator
 
-> **A GitHub template for creating standalone mloda plugins.** Part of the [mloda](https://github.com/mloda-ai/mloda) ecosystem for open data access. Visit [mloda.ai](https://mloda.ai) for an overview and business context, the [GitHub repository](https://github.com/mloda-ai/mloda) for technical context, or the [documentation](https://mloda-ai.github.io/mloda/) for detailed guides.
+A Monte Carlo mulligan simulator for **Braids, Arisen Nightmare** (mono-black cEDH), built as an [mloda](https://github.com/mloda-ai/mloda) feature engineering pipeline.
 
-Create your own FeatureGroups, ComputeFrameworks, and Extenders as standalone packages. See the [Getting Started guide](docs/getting-started.md) to create your repository, then follow the setup steps below.
+Every card mechanic, mana calculation, mulligan decision, and A/B scenario is a composable, reusable **Feature Group plugin** — demonstrating mloda's "build once, reuse everywhere" principle in a combinatorics-heavy domain.
 
-## Related Repositories
+## What it does
 
-- **[mloda](https://github.com/mloda-ai/mloda)**: The core library for open data access. Declaratively define what data you need, not how to get it. mloda handles feature resolution, dependency management, and compute framework abstraction automatically.
+- Simulates 100K+ London Mulligan sequences (7→7→6→5) for a full 99-card deck
+- Evaluates T1/T2/T3 castability of Braids for each hand
+- Runs A/B scenarios (remove a card, replace with a Swamp) to measure marginal card contribution
+- Produces per-scenario statistics, convergence plots, and card delta tables
 
-- **[mloda-registry](https://github.com/mloda-ai/mloda-registry)**: The central hub for discovering and sharing mloda plugins. Browse community-contributed FeatureGroups, find integration guides, and publish your own plugins for others to use.
-
-## Structure
-
-```
-placeholder/
-├── feature_groups/
-│   └── my_plugin/
-│       ├── __init__.py           # Package exports
-│       ├── my_feature_group.py   # Example FeatureGroup implementation
-│       └── tests/
-│           └── test_my_feature_group.py
-├── compute_frameworks/
-│   └── my_framework/
-│       ├── __init__.py
-│       └── my_compute_framework.py
-└── extenders/
-    └── my_extender/
-        ├── __init__.py
-        └── my_extender.py
-```
-
-## Key Files
-
-- `placeholder/` - Root namespace (users rename to company name)
-- `pyproject.toml` - Package config (users edit directly, not auto-generated)
-- `.github/workflows/test.yml` - CI workflow running pytest
-
-## Common Tasks
-
-### Setup Your Plugin
-
-Follow these steps to customize the template for your organization:
-
-#### 1. Rename the directory
+## Quick start
 
 ```bash
-mv placeholder acme
-```
-
-#### 2. Update pyproject.toml
-
-Edit the following fields in `pyproject.toml`:
-
-- `name`: Change `"placeholder-my-plugin"` to `"acme-my-plugin"`
-- `authors`: Update name and email
-- `description`: Update to describe your plugin
-- `tool.setuptools.packages.find.include`: Change `["placeholder*"]` to `["acme*"]`
-- `tool.pytest.ini_options.testpaths`: Change `["placeholder", "tests"]` to `["acme", "tests"]`
-
-#### 3. Update .releaserc.yaml
-
-Edit the following fields in `.releaserc.yaml`:
-
-- `message`: Change `mloda-plugin-template` to your package name (e.g., `"chore(release acme-my-plugin): ${nextRelease.version}"`)
-- `repositoryUrl`: Change to your repository URL
-
-#### 4. Update Python imports
-
-Update imports in these files (change `from placeholder.` to `from acme.`):
-
-- `acme/feature_groups/my_plugin/__init__.py`
-- `acme/feature_groups/my_plugin/tests/test_my_feature_group.py`
-- `acme/compute_frameworks/my_plugin/__init__.py`
-- `acme/compute_frameworks/my_plugin/tests/test_my_compute_framework.py`
-- `acme/extenders/my_plugin/__init__.py`
-- `acme/extenders/my_plugin/tests/test_my_extender.py`
-
-#### 5. Verify setup
-
-```bash
-uv venv && source .venv/bin/activate && uv sync --all-extras && tox
-```
-
-### Development Setup with uv
-
-**Install uv** (if not already installed):
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Create virtual environment and install dependencies:**
-```bash
-uv venv
 source .venv/bin/activate
 uv sync --all-extras
+python run_simulation.py
 ```
 
-**Run all checks with tox:**
-```bash
-# Install tox with uv backend
-uv tool install tox --with tox-uv
+## Running checks
 
-# Run all checks (pytest, ruff, mypy, bandit)
+```bash
 tox
 ```
 
-### Run individual checks
+## Architecture
 
-```bash
-# Tests only
-pytest
-
-# Format check
-ruff format --check --line-length 120 .
-
-# Lint check
-ruff check .
-
-# Type check
-mypy --strict --ignore-missing-imports .
-
-# Security check
-bandit -c pyproject.toml -r -q .
+```
+HandGenerator (DataCreator)  →  Turn1 / Turn2 / Turn3  →  MulliganResult
+      ↓                               ↓
+  hand, sim_id             t1_castable, t2_castable, t3_castable
+                                       ↓
+                           Proportion / Statistics / Plots
 ```
 
-## Related Documentation
+Card data lives in `card_database/` and `card_registries/`. Mechanics are in `cedh_mulligan_simulator/feature_groups/mulligan/`. See `todo.md` for the current backlog.
 
-Guides for plugin development can be found in mloda-registry:
+## Related
 
-- https://github.com/mloda-ai/mloda-registry/tree/main/docs/guides/
-
-Claude Code users can leverage the skills in mloda-registry for assisted plugin development:
-
-- https://github.com/mloda-ai/mloda-registry/tree/main/.claude/skills/
-
-This template includes pre-configured GitHub Actions workflows for testing, security scanning, and automated releases. See the [GitHub Workflows documentation](docs/github-workflows.md) for setup instructions and required secrets.
+- **[mloda](https://github.com/mloda-ai/mloda)**: Core library — declarative feature resolution, plugin composability, compute framework abstraction.
+- **[mloda-registry](https://github.com/mloda-ai/mloda-registry)**: Plugin guides and patterns used throughout this project.

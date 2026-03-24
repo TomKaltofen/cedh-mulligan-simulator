@@ -4,7 +4,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -30,7 +30,7 @@ class CardCooccurrence(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
 
         # Extract options
         experiment_id = (
@@ -39,19 +39,16 @@ class CardCooccurrence(FeatureGroup):
         plot_dir = features.get_options_key("plot_dir") or "plots"
         card_registry = features.get_options_key("card_registry") or DEFAULT_CARD_REGISTRY
 
-        # Compute co-occurrences for kept hands (handle both boolean True and string "keep")
-        keep_mask = (df["MulliganResult"] == True) | (df["MulliganResult"] == "keep")  # noqa: E712
-        kept_df = df[keep_mask].copy()
+        keep_mask = df["MulliganResult"].cast(pl.Boolean)
+        kept_df = df.filter(keep_mask)
 
         if len(kept_df) == 0:
-            # No kept hands — return empty column
-            df["CardCooccurrence"] = pd.array([None] * len(df), dtype="object")
-            return df
+            return df.with_columns(pl.lit(None).cast(pl.Utf8).alias("CardCooccurrence"))
 
         # Count all pairs in kept hands
         pair_counter: Counter[tuple[str, str]] = Counter()
 
-        for hand in kept_df["hand"]:
+        for hand in kept_df["hand"].to_list():
             # Exclude filler cards
             non_filler = [card for card in hand if card != "filler" and card in card_registry]
             # Generate canonical pairs
@@ -78,10 +75,10 @@ class CardCooccurrence(FeatureGroup):
             for (card_a, card_b), count in top_pairs
         ]
 
-        pd.DataFrame(rows).to_csv(output_path, index=False)
+        if rows:
+            pl.DataFrame(rows).write_csv(str(output_path))
 
         # Create output column: path for kept hands, None otherwise
-        df["CardCooccurrence"] = pd.array([None] * len(df), dtype="object")
-        df.loc[keep_mask, "CardCooccurrence"] = str(output_path)
-
-        return df
+        return df.with_columns(
+            pl.when(keep_mask).then(pl.lit(str(output_path))).otherwise(None).alias("CardCooccurrence")
+        )
