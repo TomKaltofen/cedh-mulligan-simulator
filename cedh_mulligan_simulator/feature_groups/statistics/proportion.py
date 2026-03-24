@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -15,7 +15,7 @@ class Proportion(FeatureGroup):
 
     Computes the proportion of ``True`` values for the source column
     among rows where ``MulliganResult`` is ``True``.  The scalar result
-    is broadcast to every kept row; non-kept rows receive ``NaN``.
+    is broadcast to every kept row; non-kept rows receive ``None``.
     """
 
     @classmethod
@@ -28,17 +28,18 @@ class Proportion(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
-        one_feature = features.name_of_one_feature
-        if one_feature is None:
-            raise ValueError("Proportion: no feature name found")
-        fname: str = one_feature.name
-        source = fname.replace("__proportion", "")
+        df: pl.DataFrame = data
+        kept_mask = df["MulliganResult"].cast(pl.Boolean)
+        n_kept = int(kept_mask.sum() or 0)
 
-        kept_mask = df["MulliganResult"].astype(bool)
-        n_kept = int(kept_mask.sum())
-        proportion = float(df.loc[kept_mask, source].sum()) / n_kept if n_kept > 0 else 0.0
+        new_cols = []
+        for fname in features.get_all_names():
+            source = fname.replace("__proportion", "")
+            if n_kept > 0:
+                raw = df.filter(kept_mask)[source].sum()
+                proportion = float(raw or 0) / n_kept
+            else:
+                proportion = 0.0
+            new_cols.append(pl.when(kept_mask).then(proportion).otherwise(None).alias(fname))
 
-        df[fname] = float("nan")
-        df.loc[kept_mask, fname] = proportion
-        return df
+        return df.with_columns(new_cols)

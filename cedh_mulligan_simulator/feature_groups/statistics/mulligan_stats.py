@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -14,7 +14,7 @@ class MeanMulliganDepth(FeatureGroup):
     Usage: ``Feature("MeanMulliganDepth")``
 
     Computes the mean ``mulligan_count`` across kept hands and broadcasts
-    the scalar to every kept row.  Non-kept rows receive ``NaN``.
+    the scalar to every kept row.  Non-kept rows receive ``None``.
     """
 
     def input_features(self, options: Options, feature_name: FeatureName) -> Optional[Set[Feature]]:
@@ -25,13 +25,15 @@ class MeanMulliganDepth(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
-        kept = df["MulliganResult"].astype(bool)
-        mean_depth = float(df.loc[kept, "mulligan_count"].mean()) if kept.any() else 0.0
+        df: pl.DataFrame = data
+        kept = df["MulliganResult"].cast(pl.Boolean)
+        if kept.any():
+            raw = df.filter(kept)["mulligan_count"].mean()
+            mean_depth = float(raw) if isinstance(raw, (int, float)) else 0.0
+        else:
+            mean_depth = 0.0
 
-        df["MeanMulliganDepth"] = float("nan")
-        df.loc[kept, "MeanMulliganDepth"] = mean_depth
-        return df
+        return df.with_columns(pl.when(kept).then(mean_depth).otherwise(None).alias("MeanMulliganDepth"))
 
 
 class AverageKeptHandSize(FeatureGroup):
@@ -40,7 +42,7 @@ class AverageKeptHandSize(FeatureGroup):
     Usage: ``Feature("AverageKeptHandSize")``
 
     Computes the mean ``kept_at`` across kept hands and broadcasts
-    the scalar to every kept row.  Non-kept rows receive ``NaN``.
+    the scalar to every kept row.  Non-kept rows receive ``None``.
     """
 
     def input_features(self, options: Options, feature_name: FeatureName) -> Optional[Set[Feature]]:
@@ -50,10 +52,12 @@ class AverageKeptHandSize(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
-        kept = df["MulliganResult"].astype(bool)
-        avg_size = float(df.loc[kept, "MulliganResult~kept_at"].mean()) if kept.any() else 0.0
+        df: pl.DataFrame = data
+        kept = df["MulliganResult"].cast(pl.Boolean)
+        if kept.any():
+            raw = df.filter(kept)["MulliganResult~kept_at"].mean()
+            avg_size = float(raw) if isinstance(raw, (int, float)) else 0.0
+        else:
+            avg_size = 0.0
 
-        df["AverageKeptHandSize"] = float("nan")
-        df.loc[kept, "AverageKeptHandSize"] = avg_size
-        return df
+        return df.with_columns(pl.when(kept).then(avg_size).otherwise(None).alias("AverageKeptHandSize"))

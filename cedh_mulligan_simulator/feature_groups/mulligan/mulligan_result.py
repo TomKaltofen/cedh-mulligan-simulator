@@ -2,7 +2,7 @@
 
 from typing import Any, Optional, Set
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -38,7 +38,7 @@ class MulliganResult(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data.with_row_index("__row_idx")
         kept: list[bool] = [False] * len(df)
         kept_at: list[int] = [0] * len(df)
 
@@ -49,21 +49,28 @@ class MulliganResult(FeatureGroup):
         if "hand__t1__t2__t3" in df.columns:
             turn_cols.append("hand__t1__t2__t3")
 
-        for _sim_id, group in df.groupby("simulation_id"):
-            sorted_group = group.sort_values("mulligan_count")
-            keep_idx: Optional[int] = None
+        for sub_df in df.partition_by("simulation_id", maintain_order=True):
+            sorted_group = sub_df.sort("mulligan_count")
+            keep_row_idx: Optional[int] = None
+            keep_mull_count: int = 0
 
-            for idx, row in sorted_group.iterrows():
+            for row in sorted_group.iter_rows(named=True):
                 if any(row[col] for col in turn_cols):
-                    keep_idx = int(idx)
+                    keep_row_idx = int(row["__row_idx"])
+                    keep_mull_count = int(row["mulligan_count"])
                     break
 
-            if keep_idx is None:
-                keep_idx = int(sorted_group.index[-1])
+            if keep_row_idx is None:
+                last_row = sorted_group[-1]
+                keep_row_idx = int(last_row["__row_idx"][0])
+                keep_mull_count = int(last_row["mulligan_count"][0])
 
-            kept[keep_idx] = True
-            kept_at[keep_idx] = _kept_hand_size(int(df.loc[keep_idx, "mulligan_count"]))
+            kept[keep_row_idx] = True
+            kept_at[keep_row_idx] = _kept_hand_size(keep_mull_count)
 
-        df["MulliganResult"] = kept
-        df["MulliganResult~kept_at"] = kept_at
-        return df
+        return df.drop("__row_idx").with_columns(
+            [
+                pl.Series("MulliganResult", kept),
+                pl.Series("MulliganResult~kept_at", kept_at),
+            ]
+        )

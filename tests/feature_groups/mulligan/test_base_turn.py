@@ -124,7 +124,7 @@ def test_calculate_feature_template_method() -> None:
             registry: CardRegistry,
             commander_cost: ManaRequirement,
             draw_per_turn: bool = True,
-        ) -> None:
+        ) -> Any:
             """Capture parameters for testing."""
             captured_params["data"] = data
             captured_params["feature_name"] = feature_name
@@ -132,6 +132,7 @@ def test_calculate_feature_template_method() -> None:
             captured_params["registry"] = registry
             captured_params["commander_cost"] = commander_cost
             captured_params["draw_per_turn"] = draw_per_turn
+            return data
 
     # Create mock FeatureSet
     class MockFeatureName:

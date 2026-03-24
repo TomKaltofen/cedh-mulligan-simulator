@@ -2,7 +2,7 @@
 
 from typing import Any, List, Optional, Set, Tuple
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureChainParserMixin, FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -54,7 +54,7 @@ class TurnFeatureBase(FeatureChainParserMixin, FeatureGroup):
         draw_per_turn = features.get_options_key("draw_per_turn")
         if draw_per_turn is None:
             draw_per_turn = True
-        cls._simulate_turn(data, feature_name, root, registry, commander_cost, draw_per_turn)
+        data = cls._simulate_turn(data, feature_name, root, registry, commander_cost, bool(draw_per_turn))
 
         return data
 
@@ -67,11 +67,11 @@ class TurnFeatureBase(FeatureChainParserMixin, FeatureGroup):
         registry: CardRegistry,
         commander_cost: ManaRequirement,
         draw_per_turn: bool = True,
-    ) -> None:
-        """Simulate a turn for each hand and write results to data.
+    ) -> Any:
+        """Simulate a turn for each hand and return updated data.
 
         Args:
-            data: DataFrame or dict containing hand/state data
+            data: Polars DataFrame containing hand/state data
             feature_name: The output feature name (e.g., "hand__t1")
             root: The root feature name (e.g., "hand")
             registry: Card registry for the deck
@@ -80,35 +80,37 @@ class TurnFeatureBase(FeatureChainParserMixin, FeatureGroup):
                           If False, T1 does not draw (matching some game modes).
         """
         turn_number = cls.TURN_NUMBER
-        hands: pd.Series[Any] = data[root]
+        # Convert to Python list upfront to avoid Polars Series indexing ambiguity
+        hands: list[Any] = data[root].to_list()
 
         # For T2+, get previous turn state
         if turn_number == 1:
             prev_states: Optional[List[GameState]] = None
-            libraries: Optional[Any] = data.get("remaining_library")
+            libraries: Optional[list[Any]] = (
+                data["remaining_library"].to_list() if "remaining_library" in data.columns else None
+            )
         else:
             # Previous feature name: "hand__t1__t2" -> "hand__t1"
             prev_feature_name = feature_name.rsplit("__", 1)[0]
 
-            # Read previous turn state columns including remaining library
-            prev_battlefield_col = data[f"{prev_feature_name}~battlefield"]
-            prev_hand_ends = data[f"{prev_feature_name}~hand"]
-            prev_graveyard_col = data[f"{prev_feature_name}~graveyard"]
-            prev_exile_col = data[f"{prev_feature_name}~exile"]
-            libraries = data[f"{prev_feature_name}~remaining_library"]
+            prev_battlefield_list: list[Any] = data[f"{prev_feature_name}~battlefield"].to_list()
+            prev_hand_ends_list: list[Any] = data[f"{prev_feature_name}~hand"].to_list()
+            prev_graveyard_list: list[Any] = data[f"{prev_feature_name}~graveyard"].to_list()
+            prev_exile_list: list[Any] = data[f"{prev_feature_name}~exile"].to_list()
+            libraries = data[f"{prev_feature_name}~remaining_library"].to_list()
 
             # Reconstruct GameState for each row
             assert libraries is not None  # nosec B101
             prev_states = []
             for i in range(len(hands)):
-                permanents = (
-                    prev_battlefield_col.iloc[i] if hasattr(prev_battlefield_col, "iloc") else prev_battlefield_col[i]
+                state = reconstruct_state(
+                    prev_battlefield_list[i],
+                    prev_hand_ends_list[i],
+                    prev_graveyard_list[i],
+                    prev_exile_list[i],
+                    libraries[i],
+                    registry,
                 )
-                hand_end = prev_hand_ends.iloc[i] if hasattr(prev_hand_ends, "iloc") else prev_hand_ends[i]
-                graveyard = prev_graveyard_col.iloc[i] if hasattr(prev_graveyard_col, "iloc") else prev_graveyard_col[i]
-                exile = prev_exile_col.iloc[i] if hasattr(prev_exile_col, "iloc") else prev_exile_col[i]
-                library = libraries.iloc[i] if hasattr(libraries, "iloc") else libraries[i]
-                state = reconstruct_state(permanents, hand_end, graveyard, exile, library, registry)
                 prev_states.append(state)
 
         results: List[bool] = []
@@ -123,11 +125,9 @@ class TurnFeatureBase(FeatureChainParserMixin, FeatureGroup):
 
         for i in range(len(hands)):
             if turn_number == 1:
-                hand = hands.iloc[i] if hasattr(hands, "iloc") else hands[i]
+                hand = hands[i]
                 # Get the initial library for T1
-                current_library: List[str] = []
-                if libraries is not None:
-                    current_library = libraries.iloc[i] if hasattr(libraries, "iloc") else libraries[i]
+                current_library: List[str] = libraries[i] if libraries is not None else []
 
                 # Draw a card on T1 if draw_per_turn is enabled
                 drawn: Optional[str] = None
@@ -172,12 +172,16 @@ class TurnFeatureBase(FeatureChainParserMixin, FeatureGroup):
             lands_played.append(tr.land_played)
             cards_played.append(tr.cards_played)
 
-        data[feature_name] = results
-        data[f"{feature_name}~battlefield"] = battlefields
-        data[f"{feature_name}~hand"] = hand_ends
-        data[f"{feature_name}~graveyard"] = graveyards
-        data[f"{feature_name}~exile"] = exiles
-        data[f"{feature_name}~land_played"] = lands_played
-        data[f"{feature_name}~cards_played"] = cards_played
-        data[f"{feature_name}~remaining_library"] = remaining_libraries
-        data[f"{feature_name}~drawn"] = drawn_cards
+        return data.with_columns(
+            [
+                pl.Series(feature_name, results),
+                pl.Series(f"{feature_name}~battlefield", battlefields),
+                pl.Series(f"{feature_name}~hand", hand_ends),
+                pl.Series(f"{feature_name}~graveyard", graveyards),
+                pl.Series(f"{feature_name}~exile", exiles),
+                pl.Series(f"{feature_name}~land_played", lands_played),
+                pl.Series(f"{feature_name}~cards_played", cards_played),
+                pl.Series(f"{feature_name}~remaining_library", remaining_libraries),
+                pl.Series(f"{feature_name}~drawn", drawn_cards),
+            ]
+        )

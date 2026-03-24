@@ -12,7 +12,7 @@ Usage:
 
 from typing import Any, Optional
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import DataCreator, FeatureGroup, FeatureSet
 
@@ -24,7 +24,7 @@ class HandMulliganTestDataProvider(FeatureGroup):
     before calling mlodaAPI.run_all.
     """
 
-    _test_data: Optional[pd.DataFrame] = None
+    _test_data: Optional[pl.DataFrame] = None
 
     @classmethod
     def input_data(cls) -> Optional[Any]:

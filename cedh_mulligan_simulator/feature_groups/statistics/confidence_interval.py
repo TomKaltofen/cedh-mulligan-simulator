@@ -3,7 +3,7 @@
 import math
 from typing import Any, Optional, Set, Tuple
 
-import pandas as pd
+import polars as pl
 
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
@@ -47,7 +47,7 @@ class CILower(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
         one_feature = features.name_of_one_feature
         if one_feature is None:
             raise ValueError("CILower: no feature name found")
@@ -55,14 +55,13 @@ class CILower(FeatureGroup):
         source = fname.replace("__ci_lower", "")
         z = float(features.get_options_key("ci_z") or _DEFAULT_Z)
 
-        kept = df["MulliganResult"].astype(bool)
-        n = int(kept.sum())
-        successes = int(df.loc[kept, source].sum())
+        kept = df["MulliganResult"].cast(pl.Boolean)
+        n = int(kept.sum() or 0)
+        raw = df.filter(kept)[source].sum()
+        successes = int(raw or 0)
         lower, _, _ = _wilson_interval(successes, n, z)
 
-        df[fname] = float("nan")
-        df.loc[kept, fname] = lower
-        return df
+        return df.with_columns(pl.when(kept).then(lower).otherwise(None).alias(fname))
 
 
 class CIUpper(FeatureGroup):
@@ -81,7 +80,7 @@ class CIUpper(FeatureGroup):
 
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
-        df: pd.DataFrame = data
+        df: pl.DataFrame = data
         one_feature = features.name_of_one_feature
         if one_feature is None:
             raise ValueError("CIUpper: no feature name found")
@@ -89,11 +88,10 @@ class CIUpper(FeatureGroup):
         source = fname.replace("__ci_upper", "")
         z = float(features.get_options_key("ci_z") or _DEFAULT_Z)
 
-        kept = df["MulliganResult"].astype(bool)
-        n = int(kept.sum())
-        successes = int(df.loc[kept, source].sum())
+        kept = df["MulliganResult"].cast(pl.Boolean)
+        n = int(kept.sum() or 0)
+        raw = df.filter(kept)[source].sum()
+        successes = int(raw or 0)
         _, _, upper = _wilson_interval(successes, n, z)
 
-        df[fname] = float("nan")
-        df.loc[kept, fname] = upper
-        return df
+        return df.with_columns(pl.when(kept).then(upper).otherwise(None).alias(fname))

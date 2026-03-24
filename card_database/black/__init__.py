@@ -16,8 +16,11 @@ _4B = Mana(5, black=1)
 DARK_RITUAL = ritual("dark_ritual", cost=_B, produces=Mana(3, black=3))
 CABAL_RITUAL = ritual("cabal_ritual", cost=_1B, produces=Mana(3, black=3))
 CULLING_THE_WEAK = sacrifice_outlet("culling_the_weak", cost=_B, produces_base=Mana(4, black=4))
-RAIN_OF_FILTH = ritual("rain_of_filth", cost=_B, produces=Mana())  # Variable mana
-SONGS_OF_THE_DAMNED = ritual("songs_of_the_damned", cost=_B, produces=Mana())  # Variable mana
+# Rain of Filth and Songs of the Damned produce variable mana based on runtime board state
+# (number of lands / creatures in graveyard). Excluded from mana calculation — they produce
+# Mana() here because the static engine cannot model their runtime-dependent yields.
+RAIN_OF_FILTH = ritual("rain_of_filth", cost=_B, produces=Mana())
+SONGS_OF_THE_DAMNED = ritual("songs_of_the_damned", cost=_B, produces=Mana())
 SACRIFICE = sacrifice_outlet("sacrifice", cost=_B, produces_cmc=True)
 
 # Creatures - 0-cost / free
@@ -41,6 +44,7 @@ RAZAKETH_THE_FOULBLOODED = creature("razaketh_the_foulblooded", cost=Mana(6, bla
 TRAZYN_THE_INFINITE = creature("trazyn_the_infinite", cost=Mana(4, black=1), cmc=5)
 VILIS_BROKER_OF_BLOOD = creature("vilis_broker_of_blood", cost=Mana(6, black=2), cmc=8)
 KRRIK_SON_OF_YAWGMOTH = creature("krrik_son_of_yawgmoth", cost=Mana(7, black=3), cmc=7)  # Can pay life for B
+NECROTIC_OOZE = creature("necrotic_ooze", cost=_2BB, cmc=4)
 PRIEST_OF_GIX = creature("priest_of_gix", cost=_2B, cmc=3, produces=Mana(3, black=3))
 
 # Top deck Tutors
@@ -74,6 +78,7 @@ NECROMANCY = Card(name="necromancy", type="reanimation", cost=_2B)
 REANIMATE = Card(name="reanimate", type="reanimation", cost=_B)
 SAW_IN_HALF = Card(name="saw_in_half", type="reanimation", cost=_2B)
 SHALLOW_GRAVE = Card(name="shallow_grave", type="reanimation", cost=_1B)
+DANCE_OF_THE_DEAD = Card(name="dance_of_the_dead", type="reanimation", cost=_1B)
 
 # Removal
 BITTER_TRIUMPH = Card(name="bitter_triumph", type="removal", cost=_1B)

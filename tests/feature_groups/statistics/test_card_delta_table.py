@@ -3,11 +3,12 @@
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 
 from cedh_mulligan_simulator.feature_groups.statistics.card_delta_table import CardDeltaTable
 
 
-def _create_sample_data(n_per_scenario: int = 100) -> pd.DataFrame:
+def _create_sample_data(n_per_scenario: int = 100) -> pl.DataFrame:
     """Create sample multi-scenario data for testing."""
     scenarios = [
         ("baseline", 0.65, 0.85),
@@ -28,7 +29,7 @@ def _create_sample_data(n_per_scenario: int = 100) -> pd.DataFrame:
                 }
             )
 
-    return pd.DataFrame(rows)
+    return pl.DataFrame(rows)
 
 
 class MockFeatureSet:
@@ -46,11 +47,11 @@ class MockFeatureSet:
         return None
 
 
-def _run_card_delta_table(data: pd.DataFrame, tmp_path: Path, experiment_id: str = "test") -> pd.DataFrame:
+def _run_card_delta_table(data: pl.DataFrame, tmp_path: Path, experiment_id: str = "test") -> pl.DataFrame:
     """Run CardDeltaTable.calculate_feature directly."""
     features = MockFeatureSet(experiment_id=experiment_id, plot_dir=str(tmp_path))
     result_df = CardDeltaTable.calculate_feature(data, features)  # type: ignore
-    return result_df
+    return result_df  # type: ignore[no-any-return]
 
 
 def test_column_exists(tmp_path: Path) -> None:
@@ -139,7 +140,6 @@ def test_card_name_parsing(tmp_path: Path) -> None:
 
 def test_missing_baseline_uses_first(tmp_path: Path) -> None:
     """When baseline is missing, should use first scenario alphabetically."""
-    # Create data without explicit "baseline" scenario
     scenarios = [
         ("scenario_a", 0.60, 0.80),
         ("scenario_b", 0.55, 0.75),
@@ -157,7 +157,7 @@ def test_missing_baseline_uses_first(tmp_path: Path) -> None:
                 }
             )
 
-    sample_data = pd.DataFrame(rows)
+    sample_data = pl.DataFrame(rows)
     _run_card_delta_table(sample_data, tmp_path)
 
     csv_path = tmp_path / "test" / "card_delta_table.csv"
@@ -171,11 +171,11 @@ def test_missing_baseline_uses_first(tmp_path: Path) -> None:
 
 
 def test_non_kept_rows_are_nan(tmp_path: Path) -> None:
-    """Non-kept rows should have NaN in the CardDeltaTable column."""
+    """Non-kept rows should have null in the CardDeltaTable column."""
     data = _create_sample_data()
     df = _run_card_delta_table(data, tmp_path)
-    kept = df[df["MulliganResult"]]
-    assert kept["CardDeltaTable"].notna().all()
+    kept = df.filter(pl.col("MulliganResult").cast(pl.Boolean))
+    assert kept["CardDeltaTable"].is_not_null().all()
 
 
 def test_experiment_id_overrides_scenario_id(tmp_path: Path) -> None:
