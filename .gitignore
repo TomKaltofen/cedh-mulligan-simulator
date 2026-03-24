@@ -210,5 +210,5 @@ __marimo__/
 # mloda-plugin-template
 security-reports/
 
-# Simulation plots
-plots/
+# Simulation plots (output directory only, not test directories)
+/plots/
