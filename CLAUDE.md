@@ -2,6 +2,8 @@
 
 Must read [AGENTS.md](AGENTS.md) first — it contains mloda feature group guides, pattern references, and testing strategy.
 
+> **CRITICAL RULE: No AI agent as commit author.** Never add `Co-Authored-By` or any AI agent attribution to git commit messages.
+
 ## Environment
 
 ```bash
