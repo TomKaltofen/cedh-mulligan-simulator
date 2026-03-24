@@ -10,7 +10,7 @@ version = "0.3.1"
 description = "cEDH mulligan simulator - plugin for Magic: The Gathering Commander mulligan analysis"
 license = "Apache-2.0"
 authors = [{ name = "Tom", email = "mulligan@mloda.ai" }]
-dependencies = ["mloda>=0.4.7", "mloda-testing>=0.2.10", "pandas>=2.0", "polars>=0.20"]
+dependencies = ["mloda>=0.5.4", "mloda-testing>=0.2.11", "pandas>=2.0", "polars>=0.20"]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
