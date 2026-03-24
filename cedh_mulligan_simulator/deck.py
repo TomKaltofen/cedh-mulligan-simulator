@@ -56,6 +56,10 @@ class Deck:
             return None
         return card_name
 
+    def exile_hand(self) -> None:
+        """Exile all cards from hand. Cards do not return to the library."""
+        self._hand = []
+
     def put_on_top(self, card: str) -> None:
         """Place a card on top of the library."""
         self._library.insert(0, card)

@@ -46,6 +46,7 @@ GRIM_MONOLITH = Card(name="grim_monolith", type="artifact", cost=Mana(2), produc
 WISHCLAW_TALISMAN = Card(name="wishclaw_talisman", type="artifact", cost=Mana(1))
 
 # 3
+SERUM_POWDER = Card(name="serum_powder", type="artifact", cost=Mana(3), tap_produces=Mana(1))
 STAFF_OF_DOMINATION = Card(name="staff_of_domination", type="artifact", cost=Mana(3))
 
 # 4

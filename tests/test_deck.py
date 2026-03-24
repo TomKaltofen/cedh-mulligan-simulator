@@ -103,3 +103,34 @@ def test_search_then_put_on_top() -> None:
     deck.put_on_top(card)
     assert deck.library[0] == "dark_ritual"
     assert deck.library_size == 99
+
+
+def test_exile_hand_clears_hand() -> None:
+    """exile_hand() should leave the hand empty."""
+    deck = Deck(BRAIDS_REGISTRY, deck_size=99)
+    deck.draw(7)
+    assert len(deck.hand) == 7
+    deck.exile_hand()
+    assert deck.hand == []
+
+
+def test_exile_hand_does_not_restore_library() -> None:
+    """exile_hand() should NOT return cards to the library — they are permanently removed."""
+    deck = Deck(BRAIDS_REGISTRY, deck_size=99)
+    deck.draw(7)
+    assert deck.library_size == 92
+    deck.exile_hand()
+    assert deck.library_size == 92  # still 92, not 99
+
+
+def test_exile_hand_vs_mulligan() -> None:
+    """mulligan() restores library to full size; exile_hand() does not."""
+    deck_exile = Deck(BRAIDS_REGISTRY, deck_size=99)
+    deck_exile.draw(7)
+    deck_exile.exile_hand()
+    assert deck_exile.library_size == 92
+
+    deck_mull = Deck(BRAIDS_REGISTRY, deck_size=99)
+    deck_mull.draw(7)
+    deck_mull.mulligan()
+    assert deck_mull.library_size == 99

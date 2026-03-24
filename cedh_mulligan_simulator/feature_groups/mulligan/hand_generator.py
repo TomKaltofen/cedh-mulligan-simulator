@@ -16,6 +16,8 @@ class HandGenerator(FeatureGroup):
     def input_data(cls) -> Optional[BaseInputData]:
         return DataCreator({"hand", "simulation_id", "mulligan_count", "scenario_id", "remaining_library"})
 
+    _SERUM_POWDER_NAME = "serum_powder"
+
     @classmethod
     def calculate_feature(cls, data: Any, features: FeatureSet) -> Any:
         registry: CardRegistry = features.get_options_key("card_registry") or DEFAULT_CARD_REGISTRY
@@ -23,6 +25,7 @@ class HandGenerator(FeatureGroup):
         deck_size: int = features.get_options_key("deck_size") or 99
         mulligan_steps: int = features.get_options_key("mulligan_steps") or 4
         scenario_id: str = features.get_options_key("scenario_id") or "baseline"
+        use_serum_powder: bool = cls._SERUM_POWDER_NAME in registry
 
         hands: List[List[str]] = []
         sim_ids: List[int] = []
@@ -30,17 +33,36 @@ class HandGenerator(FeatureGroup):
         scenario_ids: List[str] = []
         remaining_libraries: List[List[str]] = []
 
+        sp_name = cls._SERUM_POWDER_NAME
+
         for sim in range(n_simulations):
             deck = Deck(registry, deck_size)
+            sp_used = False
             for step in range(mulligan_steps):
                 deck.mulligan()
                 hand_size = 7 if step <= 1 else 7 - (step - 1)  # 7, 7, 6, 5
                 deck.draw(hand_size)
+
+                # Record the original hand (may contain SP -- that's fine, it's a 3-mana rock)
                 hands.append(deck.hand)
                 sim_ids.append(sim)
                 mull_counts.append(step)
                 scenario_ids.append(scenario_id)
                 remaining_libraries.append(list(deck.library))
+
+                # Serum Powder: if SP is in this hand, emit a SECOND row with the
+                # replacement hand at the same mulligan_count.  MulliganResult evaluates
+                # both (stable sort) and keeps the first castable one.
+                if use_serum_powder and not sp_used and sp_name in deck._hand:
+                    sp_used = True
+                    deck.exile_hand()
+                    if deck.library_size >= hand_size:
+                        deck.draw(hand_size)
+                        hands.append(deck.hand)
+                        sim_ids.append(sim)
+                        mull_counts.append(step)
+                        scenario_ids.append(scenario_id)
+                        remaining_libraries.append(list(deck.library))
 
         logging.debug("Create hands: %d", len(hands))
         return {
