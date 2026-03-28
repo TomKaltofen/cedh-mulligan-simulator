@@ -1,4 +1,4 @@
-"""Braids, Arisen Nightmare — mono-black cEDH card registry.
+"""Braids, Arisen Nightmare: mono-black cEDH card registry.
 
 Commander: Braids, Arisen Nightmare (3BB)
 Decklist: 98 cards (all implemented)
@@ -114,19 +114,19 @@ from cedh_mulligan_simulator.card_registry import ManaRequirement, build_registr
 BRAIDS_COST = ManaRequirement(total=3, black=2)
 
 BRAIDS_REGISTRY = build_registry(
-    # Lands — basics (5)
+    # Lands: basics (5)
     SWAMP,
     SWAMP_2,
     SNOW_COVERED_SWAMP,
     SNOW_COVERED_SWAMP_2,
     MULTIVERSAL_PASSAGE,
-    # Lands — fetches (5)
+    # Lands: fetches (5)
     BLOODSTAINED_MIRE,
     MARSH_FLATS,
     POLLUTED_DELTA,
     PRISMATIC_VISTA,
     VERDANT_CATACOMBS,
-    # Lands — special mana (7)
+    # Lands: special mana (7)
     ANCIENT_TOMB,
     CITY_OF_TRAITORS,
     GEMSTONE_CAVERNS,
@@ -134,7 +134,7 @@ BRAIDS_REGISTRY = build_registry(
     PEAT_BOG,
     PHYREXIAN_TOWER,
     URBORG_TOMB_OF_YAWGMOTH,
-    # Lands — utility / MDFC (8)
+    # Lands: utility / MDFC (8)
     BOGGART_TRAWLER,
     BOSEIJU_WHO_SHELTERS_ALL,
     CABAL_PIT,
@@ -143,14 +143,14 @@ BRAIDS_REGISTRY = build_registry(
     FELL_THE_PROFANE,
     TALON_GATES_OF_MADARA,
     URZAS_SAGA,
-    # Fast mana — 0-cost artifacts (6)
+    # Fast mana: 0-cost artifacts (6)
     CHROME_MOX,
     LIONS_EYE_DIAMOND,
     LOTUS_PETAL,
     MOX_AMBER,
     MOX_DIAMOND,
     MOX_OPAL,
-    # Fast mana — 1-cost artifacts (2)
+    # Fast mana: 1-cost artifacts (2)
     MANA_VAULT,
     SOL_RING,
     # Rituals (4)
@@ -172,7 +172,7 @@ BRAIDS_REGISTRY = build_registry(
     GRIEF,
     ORNITHOPTER,
     SHIELD_SPHERE,
-    # Creatures — combo / utility (7)
+    # Creatures: combo / utility (7)
     BLOODGHAST,
     CYNICAL_LONER,
     DISCIPLES_OF_GIX,
@@ -180,7 +180,7 @@ BRAIDS_REGISTRY = build_registry(
     NECROTIC_OOZE,
     PHYREXIAN_DEVOURER,
     PRIEST_OF_GIX,
-    # Creatures — value / hate (8)
+    # Creatures: value / hate (8)
     FAERIE_MACABRE,
     HARVESTER_OF_MISERY,
     HOARDING_BROODLORD,

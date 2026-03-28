@@ -1,4 +1,4 @@
-"""Card registry — generic card data system with a minimal default (wastes)."""
+"""Card registry: generic card data system with a minimal default (wastes)."""
 
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple

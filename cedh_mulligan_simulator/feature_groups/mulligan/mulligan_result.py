@@ -1,4 +1,4 @@
-"""MulliganResult — aggregates turn evaluations into keep/mulligan decisions."""
+"""MulliganResult: aggregates turn evaluations into keep/mulligan decisions."""
 
 from typing import Any, Optional, Set
 

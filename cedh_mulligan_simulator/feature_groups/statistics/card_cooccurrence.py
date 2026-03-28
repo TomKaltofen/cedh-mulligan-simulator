@@ -1,4 +1,4 @@
-"""CardCooccurrence feature group — finds which card pairs appear together most in kept hands."""
+"""CardCooccurrence feature group: finds which card pairs appear together most in kept hands."""
 
 from collections import Counter
 from pathlib import Path

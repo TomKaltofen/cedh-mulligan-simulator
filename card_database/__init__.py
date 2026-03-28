@@ -1,4 +1,4 @@
-"""Shared card database — individual card constants organized by color."""
+"""Shared card database: individual card constants organized by color."""
 
 from card_database.black import (
     CABAL_RITUAL,

@@ -8,7 +8,7 @@ from mloda_plugins.compute_framework.base_implementations.polars.dataframe impor
 
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
 from cedh_mulligan_simulator.feature_groups.statistics import CILower, CIUpper  # noqa: F401
-from cedh_mulligan_simulator.feature_groups.statistics.confidence_interval import _wilson_interval
+from cedh_mulligan_simulator.feature_groups.statistics.confidence_interval import wilson_interval
 from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider, SpecificHandProvider
 from tests.helpers import concat_results
 
@@ -67,23 +67,23 @@ def test_ci_bounds_contain_proportion() -> None:
     assert lower <= proportion <= upper
 
 
-def test_wilson_interval_unit() -> None:
-    """Direct unit test for _wilson_interval."""
-    lower, point, upper = _wilson_interval(50, 100)
+def testwilson_interval_unit() -> None:
+    """Direct unit test for wilson_interval."""
+    lower, point, upper = wilson_interval(50, 100)
     assert abs(point - 0.5) < 1e-9
     assert lower < 0.5 < upper
     assert lower >= 0.0
     assert upper <= 1.0
 
 
-def test_wilson_interval_zero_n() -> None:
+def testwilson_interval_zero_n() -> None:
     """Edge case: n=0 should return (0, 0, 0)."""
-    assert _wilson_interval(0, 0) == (0.0, 0.0, 0.0)
+    assert wilson_interval(0, 0) == (0.0, 0.0, 0.0)
 
 
-def test_wilson_interval_all_successes() -> None:
+def testwilson_interval_all_successes() -> None:
     """When all succeed, upper should be ~1.0."""
-    lower, point, upper = _wilson_interval(100, 100)
+    lower, point, upper = wilson_interval(100, 100)
     assert abs(point - 1.0) < 1e-9
     assert abs(upper - 1.0) < 1e-9
     assert lower > 0.9

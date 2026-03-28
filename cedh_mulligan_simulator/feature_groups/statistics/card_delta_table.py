@@ -1,4 +1,4 @@
-"""CardDeltaTable — derived feature that quantifies card impact via scenario comparison."""
+"""CardDeltaTable: derived feature that quantifies card impact via scenario comparison."""
 
 from pathlib import Path
 from typing import Any, Optional, Set
@@ -15,25 +15,25 @@ class CardDeltaTable(FeatureGroup):
     Usage: ``Feature("CardDeltaTable", options=opts)``
 
     Depends on:
-        - ``scenario_id`` — Scenario name (e.g., "baseline", "no_jeweled_lotus")
-        - ``hand__t1__proportion`` — T1 castability rate
-        - ``hand__t1__t2__proportion`` — T2 castability rate
+        - ``scenario_id``: Scenario name (e.g., "baseline", "no_jeweled_lotus")
+        - ``hand__t1__proportion``: T1 castability rate
+        - ``hand__t1__t2__proportion``: T2 castability rate
 
     Creates a CSV table with columns:
-        - ``card_removed`` — Card name (parsed from scenario_id)
-        - ``baseline_t1_rate`` — Baseline T1 %
-        - ``scenario_t1_rate`` — Scenario T1 %
-        - ``t1_delta`` — Percentage point drop
-        - ``t1_pct_change`` — Percent change
-        - ``baseline_t2_rate``, ``scenario_t2_rate``, ``t2_delta``, ``t2_pct_change`` — Same for T2
+        - ``card_removed``: Card name (parsed from scenario_id)
+        - ``baseline_t1_rate``: Baseline T1 %
+        - ``scenario_t1_rate``: Scenario T1 %
+        - ``t1_delta``: Percentage point drop
+        - ``t1_pct_change``: Percent change
+        - ``baseline_t2_rate``, ``scenario_t2_rate``, ``t2_delta``, ``t2_pct_change``: Same for T2
 
     Sorted by ``t1_delta`` descending (biggest impact first).
 
     Options (group):
-        ``experiment_id`` — subdirectory name; falls back to ``scenario_id``, then ``"default"``
+        ``experiment_id``: subdirectory name; falls back to ``scenario_id``, then ``"default"``
 
     Options (context):
-        ``plot_dir`` — base directory override (e.g. ``tmp_path`` for tests)
+        ``plot_dir``: base directory override (e.g. ``tmp_path`` for tests)
 
     Output column contains the CSV path for kept rows, ``None`` for non-kept rows.
     """

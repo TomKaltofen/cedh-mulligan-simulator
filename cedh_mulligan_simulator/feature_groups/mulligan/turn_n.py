@@ -1,4 +1,4 @@
-"""Turn feature groups — Turn1, Turn2, Turn3 with shared logic via TurnFeatureBase."""
+"""Turn feature groups: Turn1, Turn2, Turn3 with shared logic via TurnFeatureBase."""
 
 from cedh_mulligan_simulator.feature_groups.mulligan.base_turn import TurnFeatureBase
 

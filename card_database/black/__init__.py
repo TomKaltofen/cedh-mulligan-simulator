@@ -17,7 +17,7 @@ DARK_RITUAL = ritual("dark_ritual", cost=_B, produces=Mana(3, black=3))
 CABAL_RITUAL = ritual("cabal_ritual", cost=_1B, produces=Mana(3, black=3))
 CULLING_THE_WEAK = sacrifice_outlet("culling_the_weak", cost=_B, produces_base=Mana(4, black=4))
 # Rain of Filth and Songs of the Damned produce variable mana based on runtime board state
-# (number of lands / creatures in graveyard). Excluded from mana calculation — they produce
+# (number of lands / creatures in graveyard). Excluded from mana calculation. They produce
 # Mana() here because the static engine cannot model their runtime-dependent yields.
 RAIN_OF_FILTH = ritual("rain_of_filth", cost=_B, produces=Mana())
 SONGS_OF_THE_DAMNED = ritual("songs_of_the_damned", cost=_B, produces=Mana())

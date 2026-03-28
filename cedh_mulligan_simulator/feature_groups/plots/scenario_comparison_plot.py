@@ -1,4 +1,4 @@
-"""ScenarioComparisonPlot — visual dashboard showing T1/T2 rates across scenarios."""
+"""ScenarioComparisonPlot: visual dashboard showing T1/T2 rates across scenarios."""
 
 from pathlib import Path
 from typing import Any, Optional, Set
@@ -19,10 +19,10 @@ class ScenarioComparisonPlot(FeatureGroup):
     Usage: ``Feature("ScenarioComparisonPlot", options=opts)``
 
     Depends on:
-        - ``scenario_id`` — Scenario name (e.g., "baseline", "no_jeweled_lotus")
-        - ``hand__t1__proportion`` — T1 castability rate
-        - ``hand__t1__t2__proportion`` — T2 castability rate
-        - ``MulliganResult`` — kept/mulligan status
+        - ``scenario_id``: Scenario name (e.g., "baseline", "no_jeweled_lotus")
+        - ``hand__t1__proportion``: T1 castability rate
+        - ``hand__t1__t2__proportion``: T2 castability rate
+        - ``MulliganResult``: kept/mulligan status
 
     Creates a grouped bar chart with:
         - X-axis: Scenario names
@@ -31,10 +31,10 @@ class ScenarioComparisonPlot(FeatureGroup):
         - Horizontal baseline reference line (if baseline scenario exists)
 
     Options (group):
-        ``experiment_id`` — subdirectory name; falls back to ``scenario_id``, then ``"default"``
+        ``experiment_id``: subdirectory name; falls back to ``scenario_id``, then ``"default"``
 
     Options (context):
-        ``plot_dir`` — base directory override (e.g. ``tmp_path`` for tests)
+        ``plot_dir``: base directory override (e.g. ``tmp_path`` for tests)
 
     Output column contains the PNG path for kept rows, ``None`` for non-kept rows.
     """
@@ -102,7 +102,7 @@ class ScenarioComparisonPlot(FeatureGroup):
 
         ax.set_xlabel("Scenario", fontsize=12)
         ax.set_ylabel("Success Rate (%)", fontsize=12)
-        ax.set_title(f"Scenario Comparison — {experiment_id}", fontsize=14, fontweight="bold")
+        ax.set_title(f"Scenario Comparison: {experiment_id}", fontsize=14, fontweight="bold")
         ax.set_xticks(list(x))
         ax.set_xticklabels(scenarios, rotation=45, ha="right")
         ax.set_ylim(0, 100)

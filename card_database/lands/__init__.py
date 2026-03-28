@@ -15,7 +15,7 @@ GEMSTONE_CAVERNS = land("gemstone_caverns", t1_mana=any_color(1), t2_mana=any_co
 PHYREXIAN_TOWER = land("phyrexian_tower", t1_mana=Mana(1), t2_mana=Mana(1), sac_mana=Mana(2, black=2))
 WASTES = land("wastes", t1_mana=Mana(1), t2_mana=Mana(1))
 
-# Fetch lands — in mono-black, all fetch a Swamp or Snow-Covered Swamp
+# Fetch lands: in mono-black, all fetch a Swamp or Snow-Covered Swamp
 _SWAMP_TARGETS = ("swamp", "snow_covered_swamp")
 BLOODSTAINED_MIRE = land("bloodstained_mire", t1_mana=_B, t2_mana=_B, fetch_targets=_SWAMP_TARGETS)
 MARSH_FLATS = land("marsh_flats", t1_mana=_B, t2_mana=_B, fetch_targets=_SWAMP_TARGETS)

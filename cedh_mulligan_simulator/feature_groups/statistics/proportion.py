@@ -1,4 +1,4 @@
-"""Proportion — chained feature: ``<source>__proportion``."""
+"""Proportion: chained feature ``<source>__proportion``."""
 
 from typing import Any, Optional, Set
 

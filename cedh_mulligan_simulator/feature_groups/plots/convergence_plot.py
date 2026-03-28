@@ -1,4 +1,4 @@
-"""ConvergencePlot — derived feature that saves a convergence line chart as PNG."""
+"""ConvergencePlot: derived feature that saves a convergence line chart as PNG."""
 
 from pathlib import Path
 from typing import Any, Optional, Set
@@ -23,10 +23,10 @@ class ConvergencePlot(FeatureGroup):
     and renders a two-line convergence chart.
 
     Options (group):
-        ``experiment_id`` — subdirectory name; falls back to ``scenario_id``, then ``"default"``
+        ``experiment_id``: subdirectory name; falls back to ``scenario_id``, then ``"default"``
 
     Options (context):
-        ``plot_dir`` — base directory override (e.g. ``tmp_path`` for tests)
+        ``plot_dir``: base directory override (e.g. ``tmp_path`` for tests)
 
     Output column contains the file path for kept rows, ``None`` for non-kept rows.
     """
@@ -76,7 +76,7 @@ class ConvergencePlot(FeatureGroup):
         ax.set_xlabel("Simulation count (kept hands)")
         ax.set_ylabel("Running mean")
         ax.set_ylim(0.0, 1.0)
-        ax.set_title(f"Convergence — {experiment_id}")
+        ax.set_title(f"Convergence: {experiment_id}")
         ax.legend()
         ax.grid(True, alpha=0.3)
         fig.tight_layout()

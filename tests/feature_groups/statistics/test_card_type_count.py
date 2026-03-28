@@ -64,7 +64,7 @@ def test_column_exists(sample_hands: pl.DataFrame, sample_registry: CardRegistry
 
 
 def test_all_rows_have_values(sample_hands: pl.DataFrame, sample_registry: CardRegistry) -> None:
-    """No null values — all rows computed."""
+    """No null values. All rows computed."""
     features = MockFeatures(["land__type_count"], sample_registry)
     df = CardTypeCount.calculate_feature(sample_hands, features)  # type: ignore[arg-type]
     assert not df["land__type_count"].is_null().any()

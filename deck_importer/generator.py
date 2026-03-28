@@ -313,7 +313,7 @@ def generate_registry_file(
     new_entries = [e for e in entries if e.snake_name in new_vars]
     if new_entries:
         lines.append("")
-        lines.append("# NEW CARDS (auto-inferred from Scryfall — verify simulation properties)")
+        lines.append("# NEW CARDS (auto-inferred from Scryfall, verify simulation properties)")
         for entry in new_entries:
             lines.append(_render_new_card(entry))
         lines.append("")

@@ -11,7 +11,7 @@ from mloda.user import Feature, FeatureName, Options
 _DEFAULT_Z = 1.96  # 95 % confidence
 
 
-def _wilson_interval(successes: int, n: int, z: float = _DEFAULT_Z) -> Tuple[float, float, float]:
+def wilson_interval(successes: int, n: int, z: float = _DEFAULT_Z) -> Tuple[float, float, float]:
     """Return ``(lower, point, upper)`` for a Wilson score interval.
 
     The Wilson score interval provides better coverage than the normal
@@ -59,7 +59,7 @@ class CILower(FeatureGroup):
         n = int(kept.sum() or 0)
         raw = df.filter(kept)[source].sum()
         successes = int(raw or 0)
-        lower, _, _ = _wilson_interval(successes, n, z)
+        lower, _, _ = wilson_interval(successes, n, z)
 
         return df.with_columns(pl.when(kept).then(lower).otherwise(None).alias(fname))
 
@@ -92,6 +92,6 @@ class CIUpper(FeatureGroup):
         n = int(kept.sum() or 0)
         raw = df.filter(kept)[source].sum()
         successes = int(raw or 0)
-        _, _, upper = _wilson_interval(successes, n, z)
+        _, _, upper = wilson_interval(successes, n, z)
 
         return df.with_columns(pl.when(kept).then(upper).otherwise(None).alias(fname))

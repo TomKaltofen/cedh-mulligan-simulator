@@ -1,4 +1,4 @@
-"""CLI entry point — import a deck list and generate a card registry.
+"""CLI entry point: import a deck list and generate a card registry.
 
 Usage::
 
