@@ -61,7 +61,7 @@ def parse_deck_list(text: str, commander: Optional[str] = None) -> DeckList:
         if not line:
             continue
 
-        # Section separator — Moxfield uses "SIDEBOARD:", "Sideboard:", etc.
+        # Section separator. Moxfield uses "SIDEBOARD:", "Sideboard:", etc.
         if re.match(r"^sideboard\s*:?$", line, re.IGNORECASE):
             in_sideboard = True
             continue

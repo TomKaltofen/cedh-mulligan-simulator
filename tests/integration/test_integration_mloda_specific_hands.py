@@ -397,7 +397,7 @@ class TestBraidsSpecificHands:
         # Lake of the Dead: enters tapped (0 T1 mana), T2 land drop produces 0 (t1_mana=Mana()),
         # but on T3 it can sacrifice a swamp already on battlefield for 4B.
         # Hand: Swamp + Lake of the Dead + 5 fillers.
-        # T1: play Swamp (1B) — not enough for 1BB → T1 False
+        # T1: play Swamp (1B), not enough for 1BB -> T1 False
         # T2: play Lake as land drop (t1_mana=0), pool = 1B from Swamp on BF → T2 False
         # T3: BF has Swamp + Lake; Lake sacs Swamp → 4B ≥ 1BB → T3 True
         lake_hand = base_hand[:5] + [LAKE_OF_THE_DEAD.name, "swamp"]
@@ -408,7 +408,7 @@ class TestBraidsSpecificHands:
         assert df_dict["hand__t1__t2__t3"] == [True], "Lake + Swamp should allow T3 cast (4B)"
 
         # Lake alone (no swamp): T3 still False since lake produces 0 without swamp sacrifice.
-        # Use a different land (Boseiju — produces only colorless, not black) so Lake can't sacrifice.
+        # Use a different land (Boseiju, produces only colorless, not black) so Lake can't sacrifice.
         from card_database.lands import BOSEIJU_WHO_SHELTERS_ALL
 
         lake_no_swamp = base_hand[:5] + [LAKE_OF_THE_DEAD.name, BOSEIJU_WHO_SHELTERS_ALL.name]

@@ -1,4 +1,4 @@
-"""Aggregate mulligan statistics — mean depth and average kept hand size."""
+"""Aggregate mulligan statistics: mean depth and average kept hand size."""
 
 from typing import Any, Optional, Set
 

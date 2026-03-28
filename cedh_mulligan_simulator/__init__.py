@@ -1,1 +1,1 @@
-"""cEDH Mulligan Simulator — mloda feature engineering pipeline."""
+"""cEDH Mulligan Simulator: mloda feature engineering pipeline."""

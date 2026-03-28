@@ -1,4 +1,4 @@
-"""HandCompositionPlot feature group — 2×2 histogram grid of card type distributions in kept hands."""
+"""HandCompositionPlot feature group: 2x2 histogram grid of card type distributions in kept hands."""
 
 from pathlib import Path
 from typing import Any, Optional, Set
@@ -12,7 +12,8 @@ import polars as pl
 from mloda.provider import FeatureGroup, FeatureSet
 from mloda.user import Feature, FeatureName, Options
 
-from cedh_mulligan_simulator.card_registry import DEFAULT_CARD_REGISTRY, CardRegistry
+from cedh_mulligan_simulator.card_registry import DEFAULT_CARD_REGISTRY
+from cedh_mulligan_simulator.feature_groups.statistics.card_type_count import _count_type
 
 
 class HandCompositionPlot(FeatureGroup):
@@ -61,7 +62,7 @@ class HandCompositionPlot(FeatureGroup):
 
         # Create 2×2 histogram grid
         fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-        fig.suptitle(f"Hand Composition Distribution — {experiment_id}", fontsize=14)
+        fig.suptitle(f"Hand Composition Distribution: {experiment_id}", fontsize=14)
 
         for idx, card_type in enumerate(card_types):
             ax = axes[idx // 2, idx % 2]
@@ -82,14 +83,3 @@ class HandCompositionPlot(FeatureGroup):
         return df.with_columns(
             pl.when(keep_mask).then(pl.lit(str(output_path))).otherwise(None).alias("HandCompositionPlot")
         )
-
-
-def _count_type(hand: list[str], registry: CardRegistry, card_type: str) -> int:
-    """Count how many cards in hand match the given type (excluding filler)."""
-    count = 0
-    for card_name in hand:
-        if card_name != "filler":
-            card = registry.get(card_name)
-            if card is not None and card.type == card_type:
-                count += 1
-    return count

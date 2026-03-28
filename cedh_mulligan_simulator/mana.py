@@ -1,4 +1,4 @@
-"""Mana line enumeration engine — commander-agnostic."""
+"""Mana line enumeration engine, commander-agnostic."""
 
 from typing import Callable, List, Optional, Set, Tuple
 
@@ -104,26 +104,6 @@ def _has_creature_on_board(played: Set[str], registry: CardRegistry) -> bool:
     return False
 
 
-def _has_pitchable_card(hand: List[str], played: Set[str], registry: CardRegistry) -> bool:
-    """Check if hand has a nonland, nonartifact card to exile for Chrome Mox."""
-    for card_name in hand:
-        if card_name in played:
-            continue
-        card_obj = registry.get(card_name)
-        if (
-            card_obj is not None
-            and "artifact" not in card_obj.type
-            and "land" not in card_obj.type
-            and card_obj.type != ""
-        ):
-            return True
-    # Filler cards count as pitchable
-    for card_name in hand:
-        if card_name not in played and card_name == "filler":
-            return True
-    return False
-
-
 def _find_pitchable_card(hand: List[str], played: Set[str], registry: CardRegistry) -> Optional[str]:
     """Find a card to exile for Chrome Mox. Returns the card name or None."""
     # Prefer filler cards first
@@ -207,7 +187,7 @@ def _can_play_card(
             if _count_lands(hand, registry) < 2:
                 return None
         elif requires == "pitchable_card":
-            if not _has_pitchable_card(hand, played, registry):
+            if _find_pitchable_card(hand, played, registry) is None:
                 return None
             # Find and track the exiled card
             pitch_card = _find_pitchable_card(hand, played | exiled, registry)
@@ -495,7 +475,7 @@ def _compute_battlefield_mana(battlefield: Battlefield, registry: CardRegistry) 
                 found = True
                 break
         if not found:
-            land_mana_list[i] = _ZERO  # No swamp available — lake produces nothing
+            land_mana_list[i] = _ZERO  # No swamp available, lake produces nothing
 
     for i, mana in enumerate(land_mana_list):
         if i not in sacrificed_indices:
@@ -791,7 +771,7 @@ def simulate_turn(
     Args:
         turn_number: Which turn to simulate (1, 2, 3, ...).
         hand: Cards in hand at start of turn (for T1, this is the opening hand;
-              for T2+, this is prev state_after.hand — drawn_card will be appended).
+              for T2+, this is prev state_after.hand; drawn_card will be appended).
         drawn_card: Card drawn this turn (None for T1, required for T2+).
         prev_state: Game state from previous turn (None for T1).
         registry: Card registry for lookups.

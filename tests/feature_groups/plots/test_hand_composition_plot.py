@@ -13,7 +13,8 @@ from mloda_plugins.compute_framework.base_implementations.polars.dataframe impor
 from cedh_mulligan_simulator.card_registry import Card, CardRegistry, Mana
 from cedh_mulligan_simulator.feature_groups.mulligan.hand_generator import HandGenerator
 from cedh_mulligan_simulator.feature_groups.mulligan.mulligan_result import MulliganResult
-from cedh_mulligan_simulator.feature_groups.plots.hand_composition_plot import HandCompositionPlot, _count_type  # noqa: F401
+from cedh_mulligan_simulator.feature_groups.plots.hand_composition_plot import HandCompositionPlot  # noqa: F401
+from cedh_mulligan_simulator.feature_groups.statistics.card_type_count import _count_type
 from tests.feature_groups.test_data_providers import HandMulliganTestDataProvider
 from tests.feature_groups.test_data_providers import SpecificHandProvider
 

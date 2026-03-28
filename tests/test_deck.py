@@ -115,7 +115,7 @@ def test_exile_hand_clears_hand() -> None:
 
 
 def test_exile_hand_does_not_restore_library() -> None:
-    """exile_hand() should NOT return cards to the library — they are permanently removed."""
+    """exile_hand() should NOT return cards to the library. They are permanently removed."""
     deck = Deck(BRAIDS_REGISTRY, deck_size=99)
     deck.draw(7)
     assert deck.library_size == 92

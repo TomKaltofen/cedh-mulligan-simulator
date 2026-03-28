@@ -1,4 +1,4 @@
-"""Convergence — chained feature: ``<source>__convergence``."""
+"""Convergence: chained feature ``<source>__convergence``."""
 
 from typing import Any, Optional, Set
 

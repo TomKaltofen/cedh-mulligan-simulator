@@ -57,7 +57,7 @@ def parse_mana_cost(mana_cost_str: str) -> Mana:
         elif sym.isdigit():
             total += int(sym)
         elif sym in ("X", "C", "S"):
-            pass  # variable / colorless / snow — ignore
+            pass  # variable / colorless / snow, ignore
         elif "/" in sym:
             # Hybrid ({W/B}, {2/B}) or phyrexian ({B/P}): count primary colour
             primary = sym.split("/")[0]
@@ -74,7 +74,7 @@ def parse_mana_cost(mana_cost_str: str) -> Mana:
                 elif primary == "G":
                     green += 1
             elif primary.isdigit():
-                total += 1  # {2/B} generic alternative — count as 1
+                total += 1  # {2/B} generic alternative, count as 1
 
     return Mana(total, white=white, blue=blue, black=black, red=red, green=green)
 
@@ -104,7 +104,7 @@ def _parse_tap_add_mana(oracle_text: str) -> Optional[Mana]:
     # Parse embedded mana symbols
     parsed = parse_mana_symbols(mana_str)
     if parsed.total == 0 and mana_str.strip():
-        # No recognised symbols — conservative: return None to flag review
+        # No recognised symbols. Conservative: return None to flag review
         return None
     return parsed
 
@@ -167,7 +167,7 @@ def _detect_card_type(type_line: str, oracle_text: str, mana_cost_str: str) -> s
     if "creature" in tl:
         # Check for ritual-like mana production
         if re.search(r"add \{", oracle_text, re.IGNORECASE):
-            return "creature"  # mana-dork — still a creature type
+            return "creature"  # mana-dork, still a creature type
         return "creature"
 
     if "artifact" in tl:
@@ -240,7 +240,7 @@ def map_card(scryfall_data: Dict[str, Any], snake_name: str) -> MappedCard:
         return _map_artifact(snake_name, cost, oracle_text, review_notes)
 
     # Catch-all: generic Card for instants, sorceries, enchantments, planeswalkers, etc.
-    reason = f"type='{card_type}' — verify simulation properties"
+    reason = f"type='{card_type}', verify simulation properties"
     return MappedCard(
         card=Card(name=snake_name, type=card_type, cost=cost, cmc=cmc),
         needs_review=True,
@@ -343,7 +343,7 @@ def _map_creature(
         if tap_mana is not None:
             produces = tap_mana
         else:
-            review_notes.append("creature may produce mana — verify produces=")
+            review_notes.append("creature may produce mana, verify produces=")
 
     review_notes.append("verify evoke, free conditions, and other special rules")
     needs_review = True
@@ -375,13 +375,13 @@ def _map_artifact(
     if re.search(r"add \{", oracle_text, re.IGNORECASE):
         produces = _parse_ritual_produces(oracle_text)
         if produces is None:
-            review_notes.append("artifact may produce mana — verify produces=")
+            review_notes.append("artifact may produce mana, verify produces=")
 
     requires = _detect_requires(oracle_text)
 
     # Flag artifacts with special rules
     if re.search(r"sacrifice|exile|threshold|metalcraft|affinity|convoke", oracle_text, re.IGNORECASE):
-        review_notes.append("artifact has special activation condition — review requires=")
+        review_notes.append("artifact has special activation condition, review requires=")
 
     needs_review = bool(review_notes)
     reason = "; ".join(review_notes) if review_notes else ""

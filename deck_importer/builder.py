@@ -84,7 +84,7 @@ def _resolve_card(
     # 2. Fall back to Scryfall
     scryfall_data = fetch_card(snake_name.replace("_", " "))
     if scryfall_data is None:
-        # Card not found anywhere — create a minimal placeholder
+        # Card not found anywhere, create a minimal placeholder
         placeholder = Card(name=snake_name, type="unknown")
         return DeckRegistryEntry(
             snake_name=snake_name,
@@ -92,7 +92,7 @@ def _resolve_card(
             source_module=None,
             var_name=None,
             needs_review=True,
-            review_reason="card not found in database or Scryfall — add manually",
+            review_reason="card not found in database or Scryfall, add manually",
         )
 
     mapped: MappedCard = map_card(scryfall_data, snake_name)
@@ -163,5 +163,5 @@ def resolve_commander_cost(
         total, white, blue, black, red, green = map_commander_cost(scryfall_data)
         return ManaRequirement(total=total, white=white, blue=blue, black=black, red=red, green=green)
 
-    # Unknown — return zero cost and let the user fix it
+    # Unknown, return zero cost and let the user fix it
     return ManaRequirement()

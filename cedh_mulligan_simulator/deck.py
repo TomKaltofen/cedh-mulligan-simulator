@@ -1,4 +1,4 @@
-"""Deck — shuffled singleton deck with draw, mulligan, and library access."""
+"""Deck: shuffled singleton deck with draw, mulligan, and library access."""
 
 import random
 from typing import List, Optional
@@ -50,10 +50,9 @@ class Deck:
 
     def search(self, card_name: str) -> Optional[str]:
         """Find and remove a named card from the library. Returns the card or None."""
-        try:
-            self._library.remove(card_name)
-        except ValueError:
+        if card_name not in self._library:
             return None
+        self._library.remove(card_name)
         return card_name
 
     def exile_hand(self) -> None:

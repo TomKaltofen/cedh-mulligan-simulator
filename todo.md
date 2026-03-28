@@ -2,8 +2,7 @@
 
 ## Tier 1 — Code Health (quick wins)
 
-- [ ] **Remove debug print** — `cedh_mulligan_simulator/feature_groups/mulligan/hand_generator.py:44`
-  - Replace `print("Create hands:", len(hands))` with `logging.debug(...)` or remove
+- [x] **Remove debug print** (done: replaced with `logging.debug`)
 - [ ] **Update stale docs** — `README.md` and `docs/getting-started.md` still contain `mloda-plugin-template` boilerplate
   - Replace with a project-specific description of the cEDH mulligan simulator
 
@@ -54,16 +53,8 @@
 
 ## Tier 4 — Complete A/B Scenarios
 
-- [ ] **Wire up all 13 scenarios in `run_simulation.py`**
-  - Currently only `baseline` and `no_lions_eye_diamond` are in `SCENARIOS`
-  - Add: `no_jeweled_lotus`, `no_gemstone_caverns`, `no_jeweled_amulet`, `no_peat_bog`,
-    `no_0mana_creatures`, `1cmc_creatures`, `no_grief`, `no_deepwood_legate`, `no_offalsnout`,
-    `peat_bog_to_swamp`, `no_drum`, `no_mantle`
-
-- [ ] **Refactor `run_simulation.py` to remove duplicate helpers** (lower priority)
-  - `wilson_interval()` duplicates `confidence_interval.py`
-  - `create_scenario_comparison_plot()` duplicates `ScenarioComparisonPlot` FG
-  - `create_card_delta_table()` duplicates `CardDeltaTable` FG
+- [x] **Wire up all 13 scenarios** (done: all 14 scenarios in SCENARIOS)
+- [x] **Refactor run scripts to remove duplicate helpers** (done: extracted to `run_helpers.py`)
 
 ---
 
@@ -79,7 +70,7 @@
 
 ## Tier 6 — Future / Longer-term
 
-- [ ] **Polars compute framework** — swap `PandasDataFrame` for `PolarsDataFrame` at 1M+ scale
+- [x] **Polars compute framework** (done: both run scripts use `PolarsDataFrame`)
 - [ ] **OpenTelemetry lineage extender** — trace which cards contributed to a keep decision
 - [ ] **Multi-color commander support** — populate `card_database/blue/`, `green/`, etc.
 - [ ] **Community packaging** — publish mechanics feature groups to mloda-registry

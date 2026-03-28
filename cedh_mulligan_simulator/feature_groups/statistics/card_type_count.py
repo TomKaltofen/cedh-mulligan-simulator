@@ -1,4 +1,4 @@
-"""CardTypeCount feature group — counts cards of a given type in each hand."""
+"""CardTypeCount feature group: counts cards of a given type in each hand."""
 
 from typing import Any
 

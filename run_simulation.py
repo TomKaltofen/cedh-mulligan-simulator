@@ -1,9 +1,8 @@
-"""Run the cEDH Mulligan Simulator — multi-scenario comparison with statistics and plots."""
+"""Run the cEDH Mulligan Simulator: multi-scenario comparison with statistics and plots."""
 
 import logging
-import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import matplotlib
 
@@ -11,16 +10,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import polars as pl  # noqa: E402
 
-from mloda.user import Domain, Feature, Options, PluginCollector, mlodaAPI
-from mloda.provider import FeatureGroup
-from mloda_plugins.compute_framework.base_implementations.polars.dataframe import PolarsDataFrame
-
 from card_database.black import DEEPWOOD_LEGATE, OFFALSNOUT
 from card_database.colorless import JEWELED_LOTUS
 from card_database.lands import SWAMP_2
 from card_registries.mono.black.braids import BRAIDS_COST, BRAIDS_REGISTRY
-from cedh_mulligan_simulator.card_registry import Card, CardRegistry, Mana, build_registry
-from cedh_mulligan_simulator.extenders import TimingExtender
+from cedh_mulligan_simulator.card_registry import Card, Mana, build_registry
 from cedh_mulligan_simulator.feature_groups.mulligan import (
     HandGenerator,
     MulliganResult,
@@ -37,64 +31,16 @@ from cedh_mulligan_simulator.feature_groups.plots import (
     ConvergencePlot,
     HandCompositionPlot,
 )
+from run_helpers import (
+    ProviderSpec,
+    ScenarioMetrics,
+    print_section,
+    remove_card,
+    remove_cards,
+    run_experiment,
+)
 
 N_SIMULATIONS = 2000
-
-# Box-drawing constants
-BOX_WIDTH = 60
-BOX_HORIZ = "="
-BOX_THIN = "-"
-
-
-def remove_card(registry: CardRegistry, card_name: str) -> CardRegistry:
-    """Create a new registry with the specified card removed."""
-    return {k: v for k, v in registry.items() if k != card_name}
-
-
-def remove_cards(registry: CardRegistry, *card_names: str) -> CardRegistry:
-    """Create a new registry with all specified cards removed."""
-    names = set(card_names)
-    return {k: v for k, v in registry.items() if k not in names}
-
-
-def make_scenario_providers(scenario_id: str) -> set[type[FeatureGroup]]:
-    """Create domain-specific FeatureGroup wrappers with unique class names.
-
-    Uses type() to dynamically create classes with names that include the scenario_id
-    (e.g., "HandGenerator_baseline"). This ensures mloda treats each scenario's
-    feature groups as distinct, since mloda groups results by class name.
-    """
-
-    def make_domain_class(base: type[FeatureGroup], feature_names: set[str] | None = None) -> type[FeatureGroup]:
-        """Create a domain-specific subclass with unique name."""
-
-        def get_domain(cls: type[FeatureGroup]) -> Domain:
-            return Domain(scenario_id)
-
-        attrs: dict[str, Any] = {"get_domain": classmethod(get_domain)}
-        if feature_names:
-
-            def feature_names_supported(cls: type[FeatureGroup]) -> set[str]:
-                return feature_names
-
-            attrs["feature_names_supported"] = classmethod(feature_names_supported)
-
-        # Create class with unique name: "HandGenerator_baseline"
-        return type(f"{base.__name__}_{scenario_id}", (base,), attrs)
-
-    return {
-        make_domain_class(HandGenerator, {"hand", "simulation_id", "mulligan_count", "scenario_id"}),
-        make_domain_class(Turn1),
-        make_domain_class(Turn2),
-        make_domain_class(MulliganResult, {"MulliganResult"}),
-        make_domain_class(Proportion),
-        make_domain_class(MeanMulliganDepth, {"MeanMulliganDepth"}),
-        make_domain_class(AverageKeptHandSize, {"AverageKeptHandSize"}),
-        make_domain_class(CardCooccurrence, {"CardCooccurrence"}),
-        make_domain_class(ConvergencePlot, {"ConvergencePlot"}),
-        make_domain_class(HandCompositionPlot, {"HandCompositionPlot"}),
-    }
-
 
 # Replacement swamp entries used when cards are removed from the registry.
 # We use unique names so they don't collide with existing registry keys.
@@ -118,7 +64,7 @@ _BRAIDS_WITH_DEEPWOOD = build_registry(*BRAIDS_REGISTRY.values(), DEEPWOOD_LEGAT
 _BRAIDS_WITH_OFFALSNOUT = build_registry(*BRAIDS_REGISTRY.values(), OFFALSNOUT)
 
 
-def _0mana_to_1cmc(registry: CardRegistry) -> CardRegistry:
+def _0mana_to_1cmc(registry: Dict[str, Any]) -> Dict[str, Any]:
     """Replace the four 0-cost creatures with 1-CMC creatures."""
     base = remove_cards(registry, "memnite", "ornithopter", "phyrexian_walker", "shield_sphere")
     return build_registry(*base.values(), *_1CMC_CREATURES)
@@ -126,14 +72,14 @@ def _0mana_to_1cmc(registry: CardRegistry) -> CardRegistry:
 
 # Define scenarios for comparison
 SCENARIOS: List[Dict[str, Any]] = [
-    # ── Baseline ────────────────────────────────────────────────────────────
+    # -- Baseline ----------------------------------------------------------------
     {
         "id": "baseline",
         "name": "Baseline",
         "registry": BRAIDS_REGISTRY,
         "cost": BRAIDS_COST,
     },
-    # ── Fast mana: individual card removal ─────────────────────────────────
+    # -- Fast mana: individual card removal --------------------------------------
     {
         "id": "no_lions_eye_diamond",
         "name": "No LED",
@@ -158,7 +104,7 @@ SCENARIOS: List[Dict[str, Any]] = [
         "registry": remove_card(BRAIDS_REGISTRY, "jeweled_amulet"),
         "cost": BRAIDS_COST,
     },
-    # ── Lands ───────────────────────────────────────────────────────────────
+    # -- Lands -------------------------------------------------------------------
     {
         "id": "no_peat_bog",
         "name": "No Peat Bog",
@@ -167,11 +113,11 @@ SCENARIOS: List[Dict[str, Any]] = [
     },
     {
         "id": "peat_bog_to_swamp",
-        "name": "Peat Bog → Swamp",
+        "name": "Peat Bog -> Swamp",
         "registry": build_registry(*remove_card(BRAIDS_REGISTRY, "peat_bog").values(), _SWAMP_A),
         "cost": BRAIDS_COST,
     },
-    # ── Creatures ───────────────────────────────────────────────────────────
+    # -- Creatures ---------------------------------------------------------------
     {
         "id": "no_0mana_creatures",
         "name": "No 0-Mana Creatures",
@@ -202,7 +148,7 @@ SCENARIOS: List[Dict[str, Any]] = [
         "registry": remove_card(_BRAIDS_WITH_OFFALSNOUT, "offalsnout"),
         "cost": BRAIDS_COST,
     },
-    # ── Equipment ───────────────────────────────────────────────────────────
+    # -- Equipment ---------------------------------------------------------------
     {
         "id": "no_drum",
         "name": "No Springleaf Drum",
@@ -217,144 +163,35 @@ SCENARIOS: List[Dict[str, Any]] = [
     },
 ]
 
+PROVIDER_SPECS: List[ProviderSpec] = [
+    (HandGenerator, {"hand", "simulation_id", "mulligan_count", "scenario_id"}),
+    (Turn1, None),
+    (Turn2, None),
+    (MulliganResult, {"MulliganResult"}),
+    (Proportion, None),
+    (MeanMulliganDepth, {"MeanMulliganDepth"}),
+    (AverageKeptHandSize, {"AverageKeptHandSize"}),
+    (CardCooccurrence, {"CardCooccurrence"}),
+    (ConvergencePlot, {"ConvergencePlot"}),
+    (HandCompositionPlot, {"HandCompositionPlot"}),
+]
 
-def wilson_interval(successes: int, n: int, z: float = 1.96) -> Tuple[float, float, float]:
-    """Return (lower, point, upper) for a Wilson score interval."""
-    if n == 0:
-        return (0.0, 0.0, 0.0)
-    p = successes / n
-    z2 = z * z
-    denominator = 1.0 + z2 / n
-    centre = (p + z2 / (2.0 * n)) / denominator
-    margin = z * math.sqrt((p * (1.0 - p) + z2 / (4.0 * n)) / n) / denominator
-    return (max(centre - margin, 0.0), p, min(centre + margin, 1.0))
-
-
-def print_header(title: str, n_simulations: int, n_scenarios: int) -> None:
-    """Print main header with box drawing."""
-    print(BOX_HORIZ * BOX_WIDTH)
-    print(f"  {title}")
-    print(f"  {n_simulations:,} simulations per scenario x {n_scenarios} scenarios")
-    print(BOX_HORIZ * BOX_WIDTH)
-    print()
-
-
-def print_section(title: str) -> None:
-    """Print section header."""
-    print(f"{BOX_THIN * 3} {title} {BOX_THIN * 3}")
-    print()
-
-
-def format_pct(value: float) -> str:
-    """Format as percentage."""
-    return f"{value * 100:.1f}%"
-
-
-def format_ci(low: float, high: float) -> str:
-    """Format confidence interval."""
-    return f"[{low * 100:.1f}%, {high * 100:.1f}%]"
-
-
-def format_delta(value: float) -> str:
-    """Format delta (signed percentage points)."""
-    sign = "+" if value >= 0 else ""
-    return f"{sign}{value * 100:.1f}pp"
-
-
-# Type alias for scenario metrics
-ScenarioMetrics = Dict[str, Union[float, str]]
-
-
-def build_all_features(scenarios: List[Dict[str, Any]], experiment_id: str) -> list[Feature | str]:
-    """Build feature list for all scenarios with domain isolation."""
-    all_features: list[Feature | str] = []
-
-    for scenario in scenarios:
-        opts = Options(
-            group={"scenario_id": scenario["id"], "n_simulations": N_SIMULATIONS, "experiment_id": experiment_id},
-            context={"card_registry": scenario["registry"], "commander_cost": scenario["cost"]},
-        )
-        domain = scenario["id"]
-
-        all_features.extend(
-            [
-                # Core
-                Feature("MulliganResult", options=opts, domain=domain),
-                Feature("hand", options=opts, domain=domain),
-                Feature("simulation_id", options=opts, domain=domain),
-                Feature("mulligan_count", options=opts, domain=domain),
-                Feature("scenario_id", options=opts, domain=domain),
-                # Turn evaluations
-                Feature("hand__t1", options=opts, domain=domain),
-                Feature("hand__t1__t2", options=opts, domain=domain),
-                # Proportions (for multi-scenario comparison)
-                Feature("hand__t1__proportion", options=opts, domain=domain),
-                Feature("hand__t1__t2__proportion", options=opts, domain=domain),
-                # Aggregate stats
-                Feature("MeanMulliganDepth", options=opts, domain=domain),
-                Feature("AverageKeptHandSize", options=opts, domain=domain),
-                # Card co-occurrence
-                Feature("CardCooccurrence", options=opts, domain=domain),
-                # Plots (per-scenario)
-                Feature("ConvergencePlot", options=opts, domain=domain),
-                Feature("HandCompositionPlot", options=opts, domain=domain),
-            ]
-        )
-
-    return all_features
-
-
-def print_scenario_results(scenario: Dict[str, Any], df: pl.DataFrame) -> ScenarioMetrics:
-    """Print results for a single scenario and return key metrics."""
-    print(f"{BOX_THIN * 3} Scenario: {scenario['name']} {BOX_THIN * 3}")
-    print()
-
-    kept = df.filter(pl.col("MulliganResult").cast(pl.Boolean))
-    n = len(kept)
-
-    # Compute statistics directly from data
-    t1_successes = int(kept["hand__t1"].sum() or 0)
-    t2_successes = int(kept["hand__t1__t2"].sum() or 0)
-
-    t1_ci_low, t1_prop, t1_ci_high = wilson_interval(t1_successes, n)
-    t2_ci_low, t2_prop, t2_ci_high = wilson_interval(t2_successes, n)
-
-    # Extract scalar statistics from first kept row
-    mean_depth = float(kept["MeanMulliganDepth"][0] or 0.0)
-    avg_hand_size = float(kept["AverageKeptHandSize"][0] or 0.0)
-
-    # Exclusive keep categories (each hand counted once)
-    t2_only = kept["hand__t1__t2"] & ~kept["hand__t1"]
-    forced = ~kept["hand__t1__t2"] & ~kept["hand__t1"]
-
-    t2_only_pct = int(t2_only.sum() or 0) / n
-    forced_pct = int(forced.sum() or 0) / n
-
-    print(f"  {'Metric':<20} {'Rate':>10} {'95% CI':>20}")
-    print(f"  {BOX_THIN * 50}")
-    print(f"  {'T1 Castable':<20} {format_pct(t1_prop):>10} {format_ci(t1_ci_low, t1_ci_high):>20}")
-    print(f"  {'T2 Castable':<20} {format_pct(t2_prop):>10} {format_ci(t2_ci_low, t2_ci_high):>20}")
-    print(f"  {'T2 Only':<20} {format_pct(t2_only_pct):>10} {'':<20}")
-    print(f"  {'Forced Keep':<20} {format_pct(forced_pct):>10} {'':<20}")
-    print()
-
-    print(f"  {'Metric':<28} {'Value':>12}")
-    print(f"  {BOX_THIN * 42}")
-    print(f"  {'Mean Mulligan Depth':<28} {mean_depth:>12.2f}")
-    print(f"  {'Average Kept Hand Size':<28} {avg_hand_size:>11.1f} cards")
-    print()
-
-    # Get plot paths
-    convergence_path = kept["ConvergencePlot"][0] if "ConvergencePlot" in kept.columns else None
-    composition_path = kept["HandCompositionPlot"][0] if "HandCompositionPlot" in kept.columns else None
-    cooccurrence_path = kept["CardCooccurrence"][0] if "CardCooccurrence" in kept.columns else None
-
-    print(f"  {'Convergence Plot:':<20} {convergence_path or 'Not generated'}")
-    print(f"  {'Hand Composition:':<20} {composition_path or 'Not generated'}")
-    print(f"  {'Card Co-occurrence:':<20} {cooccurrence_path or 'Not generated'}")
-    print()
-
-    return {"t1_prop": t1_prop, "t2_prop": t2_prop, "name": str(scenario["name"]), "id": str(scenario["id"])}
+FEATURE_NAMES = [
+    "MulliganResult",
+    "hand",
+    "simulation_id",
+    "mulligan_count",
+    "scenario_id",
+    "hand__t1",
+    "hand__t1__t2",
+    "hand__t1__proportion",
+    "hand__t1__t2__proportion",
+    "MeanMulliganDepth",
+    "AverageKeptHandSize",
+    "CardCooccurrence",
+    "ConvergencePlot",
+    "HandCompositionPlot",
+]
 
 
 def create_scenario_comparison_plot(metrics: List[ScenarioMetrics], experiment_id: str) -> Optional[str]:
@@ -392,7 +229,7 @@ def create_scenario_comparison_plot(metrics: List[ScenarioMetrics], experiment_i
 
     ax.set_xlabel("Scenario", fontsize=12)
     ax.set_ylabel("Success Rate (%)", fontsize=12)
-    ax.set_title(f"Scenario Comparison — {experiment_id}", fontsize=14, fontweight="bold")
+    ax.set_title(f"Scenario Comparison: {experiment_id}", fontsize=14, fontweight="bold")
     ax.set_xticks(list(x))
     ax.set_xticklabels(scenarios, rotation=45, ha="right")
     ax.set_ylim(0, 100)
@@ -471,129 +308,23 @@ def create_card_delta_table(metrics: List[ScenarioMetrics], experiment_id: str) 
     return str(out_path)
 
 
-def print_delta_summary(metrics: List[ScenarioMetrics]) -> None:
-    """Print card impact summary comparing scenarios to baseline."""
-    print_section("Card Impact Summary")
-
-    baseline: Optional[ScenarioMetrics] = None
-    for m in metrics:
-        if m["id"] == "baseline":
-            baseline = m
-            break
-
-    if baseline is None:
-        print("  No baseline scenario found.")
-        print()
-        return
-
-    print(f"  {'Card Removed':<25} {'T1 Delta':>12} {'T2 Delta':>12}")
-    print(f"  {BOX_THIN * 50}")
-
-    for m in metrics:
-        if m["id"] == "baseline":
-            continue
-
-        # Parse card name from scenario id
-        scenario_id = str(m["id"])
-        card_name = scenario_id.replace("no_", "").replace("_", " ").title()
-        t1_delta = float(m["t1_prop"]) - float(baseline["t1_prop"])
-        t2_delta = float(m["t2_prop"]) - float(baseline["t2_prop"])
-
-        print(f"  {card_name:<25} {format_delta(t1_delta):>12} {format_delta(t2_delta):>12}")
-
-    print()
-
-
 def main() -> None:
     experiment_id = "comparison"
 
-    print_header("Braids Mulligan Simulator — Multi-Scenario Comparison", N_SIMULATIONS, len(SCENARIOS))
-
-    # Build domain providers for all scenarios
-    all_providers: set[type[FeatureGroup]] = set()
-    for scenario in SCENARIOS:
-        all_providers |= make_scenario_providers(scenario["id"])
-
-    # Build features for all scenarios
-    all_features = build_all_features(SCENARIOS, experiment_id)
-
-    # Single mloda call with all providers
-    # Note: ParallelizationMode.THREADING causes a race condition in mloda when multiple
-    # domains share the same feature names (e.g. hand__t1__proportion across scenarios).
-    # Sequential execution is correct here.
-    results = mlodaAPI.run_all(
-        features=all_features,
-        compute_frameworks={PolarsDataFrame},
-        function_extender={TimingExtender()},
-        plugin_collector=PluginCollector.enabled_feature_groups(all_providers),
+    all_metrics = run_experiment(
+        scenarios=SCENARIOS,
+        provider_specs=PROVIDER_SPECS,
+        feature_names=FEATURE_NAMES,
+        n_simulations=N_SIMULATIONS,
+        experiment_id=experiment_id,
+        title="Braids Mulligan Simulator: Multi-Scenario Comparison",
+        show_plots=True,
     )
 
-    # Results come back from mloda in an order determined by feature resolution.
-    # DataFrames with scenario_id column tell us which scenario they belong to.
-    # DataFrames without scenario_id are paired by column signature (same feature type).
-    #
-    # Strategy: Group by (column_signature) to find pairs/groups of same feature type,
-    # then use scenario_id within each group to assign, or positional order otherwise.
-    result_dfs = [r for r in results if isinstance(r, pl.DataFrame)]
-    n_scenarios = len(SCENARIOS)
-
-    from collections import defaultdict
-
-    # Group DataFrames by their column signature
-    sig_groups: Dict[tuple[str, ...], List[tuple[int, pl.DataFrame]]] = defaultdict(list)
-    for i, df in enumerate(result_dfs):
-        sig = tuple(sorted(df.columns))
-        sig_groups[sig].append((i, df))
-
-    # Build scenario results
-    scenario_result_lists: Dict[str, List[pl.DataFrame]] = {s["id"]: [] for s in SCENARIOS}
-
-    for sig, items in sig_groups.items():
-        # Within this group, identify scenarios
-        if len(items) == n_scenarios:
-            # Check if any have scenario_id
-            items_with_sid = [(i, df) for i, df in items if "scenario_id" in df.columns]
-            if items_with_sid:
-                # Use scenario_id to assign
-                for _, df in items:
-                    if "scenario_id" in df.columns:
-                        sid = str(df["scenario_id"][0])
-                        scenario_result_lists[sid].append(df)
-            else:
-                # No scenario_id in this group - use original result order
-                # Map to scenarios based on position in original results
-                sorted_items = sorted(items, key=lambda x: x[0])  # Sort by original index
-                scenario_ids = list(scenario_result_lists.keys())
-                for j, (_, df) in enumerate(sorted_items):
-                    sid = scenario_ids[j % n_scenarios]
-                    scenario_result_lists[sid].append(df)
-
-    all_metrics: List[ScenarioMetrics] = []
-    for scenario in SCENARIOS:
-        dfs = scenario_result_lists[scenario["id"]]
-        if not dfs:
-            print(f"Warning: No results for scenario {scenario['id']}")
-            continue
-        # Merge all DataFrames for this scenario by columns, deduplicating
-        seen: set[str] = set()
-        parts: list[pl.DataFrame] = []
-        for sub_df in dfs:
-            new_cols = [c for c in sub_df.columns if c not in seen]
-            if new_cols:
-                parts.append(sub_df.select(new_cols))
-                seen.update(new_cols)
-        df = pl.concat(parts, how="horizontal")
-        metrics = print_scenario_results(scenario, df)
-        all_metrics.append(metrics)
-
-    # Print delta summary
-    print_delta_summary(all_metrics)
-
-    # Generate comparison outputs directly (not through mloda)
+    # Generate comparison outputs (unique to multi-scenario comparison)
     scenario_plot_path = create_scenario_comparison_plot(all_metrics, experiment_id)
     delta_table_path = create_card_delta_table(all_metrics, experiment_id)
 
-    # Print comparison outputs
     print_section("Generated Comparison Outputs")
     print(f"  {'Scenario Comparison Plot:':<28} {scenario_plot_path or 'Not generated'}")
     print(f"  {'Card Delta Table:':<28} {delta_table_path or 'Not generated'}")

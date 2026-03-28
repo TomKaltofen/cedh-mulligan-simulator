@@ -1,4 +1,4 @@
-"""HandGenerator — DataCreator that generates mulligan sequences from a singleton deck."""
+"""HandGenerator: DataCreator that generates mulligan sequences from a singleton deck."""
 
 import logging
 from typing import Any, List, Optional

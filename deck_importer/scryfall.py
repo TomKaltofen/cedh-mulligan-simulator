@@ -1,6 +1,6 @@
 """Scryfall API client with local JSON cache.
 
-Rate-limit policy: Scryfall requests 50–100ms between requests.
+Rate-limit policy: Scryfall requests 50-100ms between requests.
 Cache: one JSON file per card name under .scryfall_cache/.
 """
 
